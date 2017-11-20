@@ -1,6 +1,282 @@
 ;(function() {
   "use strict"
 
+  const nodeType = {
+    TEXT_NODE: 3,
+    ELEMENT_NODE: 1,
+    INDEXED_ELEMENT_NODE: 21,
+    TAGGED_ELEMENT_NODE: 22,
+    THUNK_NODE: 23,
+    COMMENT_NODE: 8,
+    DOCUMENT_FRAGMENT_NODE: 11,
+    INDEXED_FRAGMENT_NODE: 24,
+    UNINDEXED_FRAGMENT_NODE: 25
+  }
+
+  const settingType = {
+    attribute: 1,
+    property: 2,
+    style: 3,
+    listener: 4
+  }
+
+  class Diff {
+    constructor(buffer, changeLog, address, navigationLog) {
+      this.isError = false
+
+      Diff.reset(this, buffer, changeLog, address, navigationLog)
+    }
+    static reset(diff, buffer, changeLog, address, navigationLog) {
+      diff.buffer = buffer
+      diff.changeLog = changeLog
+      diff.address = address
+      diff.navigationLog = navigationLog
+      return diff
+    }
+    static updateAddress(diff, address) {
+      return Diff.reset(
+        diff,
+        diff.buffer,
+        diff.changeLog,
+        address,
+        diff.navigationLog
+      )
+    }
+    static updateNavigationLog(diff, navigationLog) {
+      return Diff.reset(
+        diff,
+        diff.buffer,
+        diff.changeLog,
+        diff.address,
+        navigationLog
+      )
+    }
+
+    static update(diff, buffer) {
+      return Diff.reset(
+        diff,
+        buffer,
+        diff.changeLog,
+        diff.address,
+        diff.navigationLog
+      )
+    }
+    static navigate(diff) {
+      const { navigationLog, changeLog } = diff
+      let { buffer } = diff
+
+      while (navigationLog.length > 0) {
+        let [level, index] = navigationLog.pop()
+
+        if (level < 0) {
+          buffer = changeLog.selectParent(buffer)
+        }
+
+        if (level > 0) {
+          buffer = changeLog.selectChildren(buffer)
+        }
+
+        if (index !== 0) {
+          buffer = changeLog.selectSibling(buffer, index)
+        }
+      }
+
+      return Diff.update(diff, buffer)
+    }
+
+    static selectChildren(diff) {
+      const { navigationLog } = diff
+      const [level, index] =
+        navigationLog.length === 0 ? [0, 0] : navigationLog[0]
+      switch (level) {
+        case -1: {
+          if (index === 0) {
+            navigationLog.shift()
+          }
+          navigationLog.unshift([1, 0])
+          break
+        }
+        case 0: {
+          navigationLog.unshift([1, 0])
+          break
+        }
+        default: {
+          navigationLog.unshift([1, 0])
+          break
+        }
+      }
+
+      return Diff.updateNavigationLog(diff, navigationLog)
+    }
+    static selectSibling(diff, offset) {
+      const { navigationLog } = diff
+      const [level, index] =
+        navigationLog.length === 0 ? [0, 0] : navigationLog.shift()
+      navigationLog.unshift([level, index + offset])
+
+      return Diff.updateNavigationLog(diff, navigationLog)
+    }
+    static selectParent(diff) {
+      const { navigationLog } = diff
+      const [level, index] =
+        navigationLog.length === 0 ? [0, 0] : navigationLog[0]
+
+      switch (level) {
+        case -1: {
+          navigationLog.unshift([-1, 0])
+          break
+        }
+        case 0: {
+          navigationLog.shift()
+          navigationLog.unshift([-1, 0])
+          break
+        }
+        default: {
+          navigationLog.shift()
+          break
+        }
+      }
+
+      return Diff.updateNavigationLog(diff, navigationLog)
+    }
+    static removeNextSibling(diff) {
+      const { changeLog, buffer } = Diff.navigate(diff)
+      return Diff.update(diff, changeLog.removeNextSibling(buffer))
+    }
+
+    static insertText(diff, data) {
+      const { changeLog, buffer } = Diff.navigate(diff)
+      return Diff.update(diff, changeLog.insertText(buffer, data))
+    }
+    static insertComment(diff, data) {
+      const { changeLog, buffer } = Diff.navigate(diff)
+      return Diff.update(diff, changeLog.insertComment(buffer, data))
+    }
+    static insertElement(diff, localName) {
+      const { changeLog, buffer } = Diff.navigate(diff)
+      return Diff.update(diff, changeLog.insertElement(buffer, localName))
+    }
+    static insertElementNS(diff, namespaceURI, localName) {
+      const { changeLog, buffer } = Diff.navigate(diff)
+      return Diff.update(
+        diff,
+        changeLog.insertElementNS(buffer, namespaceURI, localName)
+      )
+    }
+    static insertStashedNode(diff, address) {
+      const { changeLog, buffer } = Diff.navigate(diff)
+      return Diff.update(diff, changeLog.insertStashedNode(buffer, address))
+    }
+
+    static replaceWithText(diff, data) {
+      const { changeLog, buffer } = Diff.navigate(diff)
+      return Diff.update(diff, changeLog.replaceWithText(buffer, data))
+    }
+    static replaceWithComment(diff, data) {
+      const { changeLog, buffer } = Diff.navigate(diff)
+      return Diff.update(diff, changeLog.replaceWithComment(buffer, data))
+    }
+    static replaceWithElement(diff, localName) {
+      const { changeLog, buffer } = Diff.navigate(diff)
+      return Diff.update(diff, changeLog.replaceWithElement(buffer, localName))
+    }
+    static replaceWithElementNS(diff, namespaceURI, localName) {
+      const { changeLog, buffer } = Diff.navigate(diff)
+      return Diff.update(
+        diff,
+        changeLog.replaceWithElementNS(buffer, namespaceURI, localName)
+      )
+    }
+    static replaceWithStashedNode(diff, address) {
+      const { changeLog, buffer } = Diff.navigate(diff)
+      return Diff.update(
+        diff,
+        changeLog.replaceWithStashedNode(buffer, address)
+      )
+    }
+
+    static editTextData(diff, start, end, prefix, suffix) {
+      const { changeLog, buffer } = Diff.navigate(diff)
+      return Diff.update(
+        diff,
+        changeLog.editTextData(buffer, start, end, prefix, suffix)
+      )
+    }
+    static setTextData(diff, data) {
+      const { changeLog, buffer } = Diff.navigate(diff)
+      return Diff.update(diff, changeLog.setTextData(buffer, data))
+    }
+    static setAttribute(diff, name, value) {
+      const { changeLog, buffer } = Diff.navigate(diff)
+      return Diff.update(diff, changeLog.setAttribute(buffer, name, value))
+    }
+    static removeAttribute(diff, name) {
+      const { changeLog, buffer } = Diff.navigate(diff)
+      return Diff.update(diff, changeLog.removeAttribute(buffer, name))
+    }
+    static setAttributeNS(diff, namespaceURI, name, value) {
+      const { changeLog, buffer } = Diff.navigate(diff)
+      return Diff.update(
+        diff,
+        changeLog.setAttributeNS(buffer, namespaceURI, name, value)
+      )
+    }
+    static removeAttributeNS(diff, namespaceURI, name) {
+      const { changeLog, buffer } = Diff.navigate(diff)
+      return Diff.update(
+        diff,
+        changeLog.removeAttributeNS(buffer, namespaceURI, name)
+      )
+    }
+    static assignProperty(diff, name, value) {
+      const { changeLog, buffer } = Diff.navigate(diff)
+      return Diff.update(diff, changeLog.assignProperty(buffer, name, value))
+    }
+    static deleteProperty(diff, name) {
+      const { changeLog, buffer } = Diff.navigate(diff)
+      return Diff.update(diff, changeLog.deleteProperty(buffer, name))
+    }
+    static setStyleRule(diff, name, value) {
+      const { changeLog, buffer } = Diff.navigate(diff)
+      return Diff.update(diff, changeLog.setStyleRule(buffer, name, value))
+    }
+    static removeStyleRule(diff, name) {
+      const { changeLog, buffer } = Diff.navigate(diff)
+      return Diff.update(diff, changeLog.removeStyleRule(buffer, name))
+    }
+    static addEventDecoder(diff, type, decoder, capture) {
+      const { changeLog, buffer } = Diff.navigate(diff)
+      return Diff.update(
+        diff,
+        changeLog.addEventDecoder(buffer, type, decoder, capture)
+      )
+    }
+    static removeEventDecoder(diff, type, decoder, capture) {
+      const { changeLog, buffer } = Diff.navigate(diff)
+      return Diff.update(
+        diff,
+        changeLog.removeEventDecoder(buffer, type, decoder, capture)
+      )
+    }
+    static shiftSiblings(diff, count) {
+      const { changeLog, buffer } = Diff.navigate(diff)
+      return Diff.update(diff, changeLog.shiftSiblings(buffer, count))
+    }
+    static stashNextSibling(diff, address) {
+      const next = Diff.navigate(Diff.updateAddress(diff, address + 1))
+      return Diff.update(
+        next,
+        next.changeLog.stashNextSibling(next.buffer, address)
+      )
+    }
+    static discardStashedNode(diff, address) {
+      // We don't do not encode navigation as it's not really necessary to discard
+      // nodes.
+      const { changeLog, buffer } = diff
+      return Diff.update(diff, changeLog.discardStashedNode(buffer, address))
+    }
+  }
+
   const unreachable = value => {
     const format = JSON.stringify(value)
     throw new TypeError(
@@ -8,7 +284,49 @@
     )
   }
 
+  class EmptyList {
+    constructor() {
+      this.length = 0
+      this.isEmpty = true
+    }
+
+    toArray() {
+      return nil
+    }
+    push(head) {
+      return new LinkedList(head, this)
+    }
+  }
+
+  class LinkedList {
+    constructor(head, tail) {
+      this.isEmpty = false
+
+      this.head = head
+      this.tail = tail
+      this.length = this.tail.length + 1
+    }
+    push(head) {
+      return new LinkedList(head, this)
+    }
+    toArray() {
+      const array = []
+      let node = this
+      while (node.isEmpty === false) {
+        array.push(node.head)
+        node = node.tail
+      }
+      return array
+    }
+  }
+
   const nil = Object.freeze([])
+  const emptyList = new EmptyList()
+
+  const empty$2 = () => emptyList
+
+  const Retain = "Retain"
+  const Delete = "Delete"
 
   // We don't want to copy arrays all the time, aren't mutating lists, and
   // only need O(1) prepend and length, we can get away with a custom singly
@@ -17,114 +335,893 @@
   // Abstract out the table in case I want to edit the implementation to
   // arrays of arrays or something.
 
+  class Table {
+    constructor() {
+      this.cells = Object.create(null)
+      this.last = Object.create(null)
+      this.next = Object.create(null)
+    }
+    static init(last, next) {
+      const table = new this()
+      let n = last.length
+      let m = next.length
+      let i = 0
+      let j = 0
+
+      table.put(i, j, new Cell(empty$2()))
+
+      for (i = 1; i <= m; i += 1) {
+        const [key, node] = next[i - 1]
+        table.next[key] = node
+        table.put(i, 0, table.get(i - 1, 0).insert(key))
+      }
+
+      for (j = 1; j <= n; j += 1) {
+        const [key, node] = last[j - 1]
+        table.last[key] = j - 1
+        table.put(0, j, table.get(0, j - 1).delete(key))
+      }
+
+      return table
+    }
+    static create(last, next) {
+      const n = last.length
+      const m = next.length
+
+      let table = Table.init(last, next)
+      let i = 0
+      let j = 0
+
+      for (i = 1; i <= m; i += 1) {
+        for (j = 1; j <= n; j += 1) {
+          table = chooseCell(
+            table,
+            i,
+            j,
+            last,
+            next,
+            (direction, table, edits, last, next) => {
+              switch (direction) {
+                case "Left": {
+                  return table.put(i, j, edits.insert(next[i - 1][0]))
+                }
+                case "Up": {
+                  return table.put(i, j, edits.delete(last[j - 1][0]))
+                }
+                case "Diagonal": {
+                  if (last[j - 1][0] === next[i - 1][0]) {
+                    return table.put(i, j, edits.retain(last[j - 1][0]))
+                  } else {
+                    return table.put(
+                      i,
+                      j,
+                      edits.delete(last[j - 1][0]).insert(next[i - 1][0])
+                    )
+                  }
+                }
+                default:
+                  return unreachable(direction)
+              }
+            }
+          )
+        }
+      }
+
+      return table
+    }
+    put(x, y, cell) {
+      this.cells[`${x},${y}`] = cell
+      return this
+    }
+    get(x, y) {
+      const cell = this.cells[`${x},${y}`]
+      if (cell) {
+        return cell
+      } else {
+        return (this.cells[`${x},${y}`] = new Cell(empty$2()))
+      }
+    }
+  }
+
+  class Cell {
+    constructor(edits) {
+      this.edits = edits
+      this.length = edits.length
+    }
+    insert(key) {
+      return new Cell(this.edits.push(key))
+    }
+    delete(key) {
+      return new Cell(this.edits.push(Delete))
+    }
+    retain(key) {
+      const { edits } = this
+      return new Cell(edits.push(Retain))
+    }
+    toArray() {
+      return this.edits.toArray().reverse()
+    }
+  }
+
+  const chooseCell = (table, x, y, last, next, edit) => {
+    let edits = table.get(x, y - 1)
+    let min = edits.length
+    let direction = "Up"
+
+    if (table.get(x - 1, y).length < min) {
+      edits = table.get(x - 1, y)
+      min = edits.length
+      direction = "Left"
+    }
+
+    if (table.get(x - 1, y - 1).length < min) {
+      edits = table.get(x - 1, y - 1)
+      min = edits.length
+      direction = "Diagonal"
+    }
+
+    return edit(direction, table, edits, last, next)
+  }
+
   // Constructor for operations (which are a stream of edits). Uses
   // variation of Levenshtein Distance.
 
   const empty$1 = Object.freeze([])
   const blank$1 = Object.freeze(Object.create(null))
 
-  const patch = (archive, changeList) => archive.patch(changeList)
-
-  /**
-   * Represents succeeded result and contains result `value`.
-   * @param a type of the `value` for this result.
-   */
-  class Ok {
-    /**
-     * @param value Success value of this result.
-     */
-
-    /**
-     * Sentinel property for diferentitating between `Ok` and `Error` results.
-     */
-    constructor(value) {
-      this.isOk = true
-
-      this.value = value
+  class Changes {
+    constructor(last, next) {
+      this.last = last
+      this.next = next
     }
-    map(f) {
-      return new Ok(f(this.value))
-    }
-    format(f) {
-      return this
-    }
-    chain(next) {
-      return next(this.value)
-    }
-    capture(next) {
-      return this
-    }
-    recover(f) {
-      return this
-    }
-    and(result) {
-      return result
-    }
-    or(result) {
-      return this
-    }
-    toValue(fallback) {
-      return this.value
-    }
-    toMaybe() {
-      return this.value
+    encode(changeLog, init) {
+      return diffNode(this.last, this.next, new Diff(init, changeLog, 1, []))
+        .buffer
     }
   }
 
-  /**
-   * Represents failer result and contains result `error`.
-   * @param x type of the `error` value for failed result.
-   */
-  class Error$1 {
-    /**
-     * @param error Error value of this result.
-     */
+  const diff = (last, next) => new Changes(last, next)
 
-    /**
-     * Sentinel property for diferentitating between `Ok` and `Error` results.
-     */
-    constructor(error) {
-      this.isOk = false
+  const removeFragment = (node, log) => {
+    const { children } = node
+    let index = 0
+    while (index >= 0) {
+      const child = children[index]
+      if (child == null) {
+        index = -1
+      } else {
+        index++
+        log = Diff.removeNextSibling(log)
+      }
+    }
+    return log
+  }
 
-      this.error = error
+  const insertText = (node, log) => Diff.insertText(log, node.data)
+
+  const insertComment = (node, log) => Diff.insertComment(log, node.data)
+
+  const insertElementNode = (node, log) => {
+    const { localName, namespaceURI } = node
+    const out =
+      namespaceURI == null
+        ? Diff.insertElement(log, localName)
+        : Diff.insertElementNS(log, namespaceURI, localName)
+    return out
+  }
+
+  const insertIndexedElement = (node, log) =>
+    Diff.selectSibling(
+      populateIndexedElement(
+        node,
+        setSettings$1(node, Diff.selectSibling(insertElementNode(node, log), 1))
+      ),
+      -1
+    )
+
+  const insertUnindexedElement = (node, log) =>
+    Diff.selectSibling(
+      populateUnindexedElement(
+        node,
+        setSettings$1(node, Diff.selectSibling(insertElementNode(node, log), 1))
+      ),
+      -1
+    )
+
+  const populateIndexedElement = (node, log) =>
+    Diff.selectParent(
+      insertIndexedChildren(node.children, Diff.selectChildren(log))
+    )
+
+  const populateUnindexedElement = (node, log) =>
+    Diff.selectParent(
+      insertUnindexedChildren(node.children, Diff.selectChildren(log))
+    )
+
+  const insertIndexedFragment = (node, log) =>
+    insertIndexedChildren(node.children, log)
+
+  const insertUnindexedFragment = (node, log) =>
+    insertUnindexedChildren(node.children, log)
+
+  const insertIndexedChildren = (children, log) =>
+    diffIndexedChildren(empty$1, children, log)
+
+  const insertUnindexedChildren = (children, log) =>
+    diffUnindexedChildren(empty$1, children, log)
+
+  const insertThunk = (thunk, log) => insertNode(thunk.force(), log)
+
+  const insertTagged = (tagged, log) => insertNode(tagged.node, log)
+
+  const replaceWithText = (node, log) => Diff.replaceWithText(log, node.data)
+
+  const replaceWithComment = (node, log) =>
+    Diff.replaceWithComment(log, node.data)
+
+  const replaceWithElementNode = (node, log) => {
+    const { localName, namespaceURI } = node
+    const out =
+      namespaceURI == null
+        ? Diff.replaceWithElement(log, localName)
+        : Diff.replaceWithElementNS(log, namespaceURI, localName)
+    return out
+  }
+
+  const replaceWithUnindexedElement = (node, log) =>
+    populateUnindexedElement(
+      node,
+      setSettings$1(node, replaceWithElementNode(node, log))
+    )
+
+  const replaceWithIndexedElement = (node, log) =>
+    populateIndexedElement(
+      node,
+      setSettings$1(node, replaceWithElementNode(node, log))
+    )
+
+  const replaceWithThunk = (thunk, log) => replaceWithNode(thunk.force(), log)
+
+  const replaceWithTagged = (tagged, log) => replaceWithNode(tagged.node, log)
+
+  const replaceWithIndexedFragment = (node, log) =>
+    insertIndexedFragment(
+      node,
+      Diff.removeNextSibling(Diff.selectSibling(log, -1))
+    )
+
+  const replaceWithUnindexedFragment = (node, log) =>
+    insertUnindexedFragment(
+      node,
+      Diff.removeNextSibling(Diff.selectSibling(log, -1))
+    )
+
+  const replaceWithNode = (node, log) => {
+    switch (node.nodeType) {
+      case nodeType.TEXT_NODE: {
+        return replaceWithText(node, log)
+      }
+      case nodeType.COMMENT_NODE: {
+        return replaceWithComment(node, log)
+      }
+      case nodeType.ELEMENT_NODE: {
+        return replaceWithUnindexedElement(node, log)
+      }
+      case nodeType.INDEXED_ELEMENT_NODE: {
+        return replaceWithIndexedElement(node, log)
+      }
+      case nodeType.THUNK_NODE: {
+        return replaceWithThunk(node, log)
+      }
+      case nodeType.TAGGED_ELEMENT_NODE: {
+        return replaceWithTagged(node, log)
+      }
+      case nodeType.INDEXED_FRAGMENT_NODE: {
+        return replaceWithIndexedFragment(node, log)
+      }
+      case nodeType.UNINDEXED_FRAGMENT_NODE: {
+        return replaceWithUnindexedFragment(node, log)
+      }
+      default: {
+        return unreachable(node)
+      }
     }
-    map(f) {
-      return this
+  }
+
+  const insertNode = (node, log) => {
+    switch (node.nodeType) {
+      case nodeType.TEXT_NODE: {
+        return Diff.insertText(log, node.data)
+      }
+      case nodeType.COMMENT_NODE: {
+        return Diff.insertComment(log, node.data)
+      }
+      case nodeType.ELEMENT_NODE: {
+        return insertUnindexedElement(node, log)
+      }
+      case nodeType.INDEXED_ELEMENT_NODE: {
+        return insertIndexedElement(node, log)
+      }
+      case nodeType.THUNK_NODE: {
+        return insertThunk(node, log)
+      }
+      case nodeType.TAGGED_ELEMENT_NODE: {
+        return insertTagged(node, log)
+      }
+      case nodeType.INDEXED_FRAGMENT_NODE: {
+        return insertIndexedFragment(node, log)
+      }
+      case nodeType.UNINDEXED_FRAGMENT_NODE: {
+        return insertUnindexedFragment(node, log)
+      }
+      default: {
+        return unreachable(node)
+      }
     }
-    format(f) {
-      return new Error$1(f(this.error))
+  }
+
+  const diffThunk = (last, next, log) => {
+    const { args: lastArgs, render: lastRender } = last
+    const { args: nextArgs, render: nextRender } = next
+    const equal =
+      lastRender === nextRender &&
+      lastArgs.length === nextArgs.length &&
+      lastArgs[0] === nextArgs[0] &&
+      lastArgs[1] === nextArgs[1] &&
+      lastArgs[2] === nextArgs[2] &&
+      lastArgs[3] === nextArgs[3] &&
+      lastArgs[4] === nextArgs[4] &&
+      lastArgs[5] === nextArgs[5] &&
+      lastArgs[6] === nextArgs[6] &&
+      lastArgs[7] === nextArgs[7] &&
+      lastArgs[8] === nextArgs[8]
+
+    if (equal) {
+      next.node = last.node
+      return log
+    } else {
+      return diffNode(last.force(), next.force(), log)
     }
-    chain(next) {
-      return this
+  }
+
+  const diffTagged = (last, next, log) => {
+    return diffNode(last.node, next.node, log)
+  }
+
+  const diffNode = (last, next, log) => {
+    if (last === next) {
+      return log
+    } else {
+      switch (next.nodeType) {
+        case nodeType.TEXT_NODE: {
+          switch (last.nodeType) {
+            case nodeType.TEXT_NODE:
+              return diffText(last, next, log)
+            case nodeType.INDEXED_FRAGMENT_NODE:
+              return insertText(next, removeFragment(last, log))
+            case nodeType.UNINDEXED_FRAGMENT_NODE:
+              return insertText(next, removeFragment(last, log))
+            default:
+              return replaceWithText(next, log)
+          }
+        }
+        case nodeType.COMMENT_NODE: {
+          switch (last.nodeType) {
+            case nodeType.COMMENT_NODE:
+              return diffComment(last, next, log)
+            case nodeType.INDEXED_FRAGMENT_NODE:
+              return insertComment(next, removeFragment(last, log))
+            case nodeType.UNINDEXED_FRAGMENT_NODE:
+              return insertComment(next, removeFragment(last, log))
+            default:
+              return replaceWithComment(next, log)
+          }
+        }
+        case nodeType.ELEMENT_NODE: {
+          switch (last.nodeType) {
+            case nodeType.ELEMENT_NODE:
+              return diffUnindexedElement(last, next, log)
+            case nodeType.INDEXED_FRAGMENT_NODE:
+              return insertUnindexedElement(next, removeFragment(last, log))
+            case nodeType.UNINDEXED_FRAGMENT_NODE:
+              return insertUnindexedElement(next, removeFragment(last, log))
+            default:
+              return replaceWithUnindexedElement(next, log)
+          }
+        }
+        case nodeType.INDEXED_ELEMENT_NODE: {
+          switch (last.nodeType) {
+            case nodeType.INDEXED_ELEMENT_NODE:
+              return diffIndexedElement(last, next, log)
+            case nodeType.INDEXED_FRAGMENT_NODE:
+              return insertIndexedElement(next, removeFragment(last, log))
+            case nodeType.UNINDEXED_FRAGMENT_NODE:
+              return insertIndexedElement(next, removeFragment(last, log))
+            default:
+              return replaceWithIndexedElement(next, log)
+          }
+        }
+        case nodeType.THUNK_NODE: {
+          switch (last.nodeType) {
+            case nodeType.THUNK_NODE:
+              return diffThunk(last, next, log)
+            case nodeType.INDEXED_FRAGMENT_NODE:
+              return insertThunk(next, removeFragment(last, log))
+            case nodeType.UNINDEXED_FRAGMENT_NODE:
+              return insertThunk(next, removeFragment(last, log))
+            default:
+              return replaceWithThunk(next, log)
+          }
+        }
+        case nodeType.TAGGED_ELEMENT_NODE: {
+          switch (last.nodeType) {
+            case nodeType.TAGGED_ELEMENT_NODE:
+              return diffTagged(last, next, log)
+            case nodeType.INDEXED_FRAGMENT_NODE:
+              return insertTagged(next, removeFragment(last, log))
+            case nodeType.UNINDEXED_FRAGMENT_NODE:
+              return insertTagged(next, removeFragment(last, log))
+            default:
+              return replaceWithTagged(next, log)
+          }
+        }
+        case nodeType.INDEXED_FRAGMENT_NODE: {
+          switch (last.nodeType) {
+            case nodeType.INDEXED_FRAGMENT_NODE:
+              return diffIndexedFragment(last, next, log)
+            case nodeType.UNINDEXED_FRAGMENT_NODE:
+              return insertIndexedFragment(next, removeFragment(last, log))
+            default:
+              return replaceWithIndexedFragment(next, log)
+          }
+        }
+        case nodeType.UNINDEXED_FRAGMENT_NODE: {
+          switch (last.nodeType) {
+            case nodeType.UNINDEXED_FRAGMENT_NODE:
+              return diffUnindexedFragment(last, next, log)
+            case nodeType.INDEXED_FRAGMENT_NODE:
+              return insertUnindexedFragment(next, removeFragment(last, log))
+            default:
+              return replaceWithUnindexedFragment(next, log)
+          }
+        }
+        default: {
+          return unreachable(next)
+        }
+      }
     }
-    capture(next) {
-      return next(this.error)
+  }
+
+  const diffText = (last, next, log) => {
+    if (last == null) {
+      return insertText(next, log)
+    } else if (last.data === next.data) {
+      return log
+    } else {
+      return diffTextData(last.data, next.data, log)
     }
-    recover(f) {
-      return new Ok(f(this.error))
+  }
+
+  const diffComment = (last, next, log) => {
+    if (last == null) {
+      return insertComment(next, log)
+    } else if (last.data === next.data) {
+      return log
+    } else {
+      return diffTextData(last.data, next.data, log)
     }
-    and(result) {
-      return this
+  }
+
+  const diffTextData = (last, next, log) => {
+    const nextLength = next.length
+    const lastLength = last.length
+    if (nextLength <= 6) {
+      return Diff.setTextData(log, next)
+    } else if (lastLength > nextLength) {
+      const index = last.indexOf(next)
+      if (index === -1) {
+        return Diff.setTextData(log, next)
+      } else {
+        return Diff.editTextData(
+          log,
+          index,
+          lastLength - index - nextLength,
+          "",
+          ""
+        )
+      }
+    } else {
+      const index = next.indexOf(last)
+      if (index === -1) {
+        return Diff.setTextData(log, next)
+      } else {
+        return Diff.editTextData(
+          log,
+          0,
+          0,
+          next.substr(0, index),
+          next.substr(index + last.length)
+        )
+      }
     }
-    or(result) {
-      return result
+  }
+
+  const diffUnindexedElement = (last, next, log) => {
+    if (
+      next.localName === last.localName &&
+      next.namespaceURI === last.namespaceURI
+    ) {
+      return Diff.selectParent(
+        diffUnindexedChildren(
+          last.children,
+          next.children,
+          Diff.selectChildren(diffSettings(last, next, log))
+        )
+      )
+    } else {
+      return replaceWithUnindexedElement(next, log)
     }
-    toValue(fallback) {
-      return fallback
+  }
+
+  const diffUnindexedFragment = (last, next, log) =>
+    diffUnindexedChildren(last.children, next.children, log)
+
+  const diffUnindexedChildren = (last, next, log) => {
+    let index = 0
+    while (index >= 0) {
+      const lastChild = last[index]
+      const nextChild = next[index]
+
+      // If last and next versions contain a child for the given index, just
+      // diff them and move on.
+      if (lastChild != null && nextChild != null) {
+        log = diffNode(lastChild, nextChild, Diff.selectSibling(log, 1))
+        index += 1
+        // If child is present in next version but not in the last version
+        // insert it and select it.
+      } else if (nextChild != null) {
+        log = Diff.selectSibling(insertNode(nextChild, log), 1)
+        index += 1
+        // If child is present in last version but isn't present in new version
+        // remove child
+      } else if (lastChild != null) {
+        log = Diff.removeNextSibling(log)
+        index += 1
+      } else {
+        index = -1
+      }
     }
-    toMaybe() {
-      return null
+
+    return log
+  }
+
+  const diffIndexedElement = (last, next, log) => {
+    if (
+      next.localName === last.localName &&
+      next.namespaceURI === next.namespaceURI
+    ) {
+      return Diff.selectParent(
+        diffIndexedChildren(
+          last.children,
+          next.children,
+          Diff.selectChildren(diffSettings(last, next, log))
+        )
+      )
+    } else {
+      return replaceWithIndexedElement(next, log)
     }
+  }
+
+  const diffIndexedFragment = (last, next, log) =>
+    diffIndexedChildren(last.children, next.children, log)
+
+  const diffIndexedChildren = (last, next, diff) => {
+    const table = Table.create(last, next)
+    const edits = table.get(next.length, last.length).toArray()
+    const stash = {}
+    const shifted = {}
+
+    let index = 0
+    for (let edit of edits) {
+      switch (edit) {
+        case Delete: {
+          const key = last[index][0]
+          if (table.next[key] == null) {
+            diff == Diff.removeNextSibling(diff)
+          } else if (shifted[key] == null) {
+            stash[key] = diff.address
+            diff = Diff.stashNextSibling(diff, diff.address)
+          }
+          index++
+          break
+        }
+        case Retain: {
+          const [key, node] = last[index]
+          diff = diffNode(node, table.next[key], Diff.selectSibling(diff, 1))
+          index++
+          break
+        }
+        default: {
+          const key = edit
+          if (table.last[key] == null) {
+            diff = insertNode(table.next[key], diff)
+            diff = Diff.selectSibling(diff, 1)
+          } else {
+            if (stash[key] == null) {
+              shifted[key] = true
+              diff = Diff.shiftSiblings(diff, table.last[key] - index)
+              diff = Diff.selectSibling(diff, 1)
+            } else {
+              diff = Diff.insertStashedNode(diff, stash[key])
+              diff = Diff.selectSibling(diff, 1)
+            }
+          }
+        }
+      }
+    }
+
+    return diff
+  }
+  // const diffIndexedChildren = <a, x>(
+  //   last: IndexedChildren<a>,
+  //   next: IndexedChildren<a>,
+  //   log: Diff<x>
+  // ): Diff<x> => {
+  //   let migrants: ?{ [string]: [number, Node<a>] } = null
+  //   let lastIndex = 0
+  //   let nextIndex = 0
+  //   let offset = 0
+
+  //   while (lastIndex >= 0) {
+  //     const lastIndexed = last[lastIndex]
+  //     // If child in last version does not exist we just break a loop.
+  //     if (lastIndexed == null) {
+  //       lastIndex = -1
+  //     } else {
+  //       const [lastKey, lastNode] = lastIndexed
+  //       // If migrants table is empty we have not encountered index missmatch yet
+  //       // which allows us to write diff directly into the log.
+  //       if (migrants == null) {
+  //         const nextIndexed = next[nextIndex]
+  //         // If indexes match then just diff nodes and move to next sibling
+  //         if (nextIndexed && nextIndexed[0] === lastKey) {
+  //           const [nextKey, nextNode] = next[nextIndex]
+  //           log = diffNode(lastNode, nextNode, Diff.selectSibling(log, 1))
+  //           lastIndex += 1
+  //           nextIndex += 1
+  //         } else {
+  //           // If indexes did not match then last child either got moved or removed
+  //           // but we won't know which one until we complete iteration over the next
+  //           // children. There for we store child and it's original position to the
+  //           // migration table move to the next child.
+  //           migrants = { [lastKey]: [lastIndex, lastNode] }
+  //           lastIndex += 1
+  //         }
+  //       } else {
+  //         // If table isn't empty then we'll need to either rearrange or remove
+  //         // children but for that we'll need to populate the table with rest of the
+  //         // children and figure out how the need to be (re)moved during iteration
+  //         // over the next children.
+  //         migrants[lastKey] = [lastIndex, lastNode]
+  //         lastIndex += 1
+  //       }
+  //     }
+  //   }
+
+  //   // At this point no more children left in last version, so we will just add
+  //   // children from next version if there are some left.
+  //   while (nextIndex >= 0) {
+  //     const nextIndexed = next[nextIndex]
+  //     if (nextIndexed == null) {
+  //       nextIndex = -1
+  //     } else {
+  //       const [key, node] = nextIndexed
+  //       const migrant = migrants != null ? migrants[key] : null
+  //       // If child is in migrants table it means it was reordered, in that case we
+  //       // insert it back into the tree and diff against next version and move on.
+  //       if (migrant) {
+  //         const [lastIndex, lastNode] = migrant
+  //         // Calculate how many children are between currently selected node and
+  //         // and a child matching the key.
+  //         const n = lastIndex + offset - nextIndex
+  //         // If number is positive, then move child for this key to the next
+  //         // sibling position.
+  //         if (n > 0) {
+  //           log = Diff.shiftSiblings(log, n)
+  //           offset += 1
+  //         } else {
+  //           offset -= 1
+  //         }
+
+  //         log = diffNode(lastNode, node, Diff.selectSibling(log, 1))
+
+  //         if (migrants != null) {
+  //           delete migrants[key]
+  //         }
+  //         nextIndex += 1
+  //       } else {
+  //         // If child was not in the migrants table then it's a new child and we
+  //         // just insert it and select next. We also increment offset as all the
+  //         // children in migrants table would move position further due to inserted
+  //         // child.
+  //         log = Diff.selectSibling(insertNode(node, log), 1)
+  //         nextIndex += 1
+  //         offset += 1
+  //       }
+  //     }
+  //   }
+
+  //   // if there are children left in the migrants table those are left overs from
+  //   // last child list there for we remove each one. Note that we don't actually
+  //   // care about their indexes as we just going to remove them.
+  //   if (migrants) {
+  //     for (let key in migrants) {
+  //       log = Diff.removeNextSibling(log)
+  //     }
+  //   }
+
+  //   return log
+  // }
+
+  const setSettings$1 = (node, log) => {
+    const v1 = log
+    const v2 = diffProperties(blank$1, node.properties, v1)
+    const v3 = diffAttributes(blank$1, node.attributes, v2)
+    const v4 = diffStyle(blank$1, node.style, v3)
+    const v5 = diffListeners(blank$1, node.listeners, v4)
+    return v5
+  }
+
+  const diffSettings = (last, next, log) => {
+    const v1 = log
+    const v2 = diffProperties(last.properties, next.properties, v1)
+    const v3 = diffAttributes(last.attributes, next.attributes, v2)
+    const v4 = diffStyle(last.style, next.style, v3)
+    const v5 = diffListeners(last.listeners, next.listeners, v4)
+    return v5
+  }
+
+  const diffProperties = (last, next, log) => {
+    for (let name in last) {
+      if (!(name in next)) {
+        log = Diff.deleteProperty(log, name)
+      }
+    }
+
+    for (let name in next) {
+      const value = next[name]
+      if (last[name] !== value) {
+        if (value === undefined) {
+          log = Diff.deleteProperty(log, name)
+        } else {
+          log = Diff.assignProperty(log, name, value)
+        }
+      }
+    }
+
+    return log
+  }
+
+  const diffAttributes = (last, next, log) => {
+    for (let key in last) {
+      if (!(key in next)) {
+        const attribute = last[key]
+        if (attribute != null) {
+          const { name, namespaceURI } = attribute
+          if (namespaceURI == null) {
+            log = Diff.removeAttribute(log, name)
+          } else {
+            log = Diff.removeAttributeNS(log, namespaceURI, name)
+          }
+        }
+      }
+    }
+
+    for (let key in next) {
+      const attribute = next[key]
+      if (attribute != null) {
+        const { namespaceURI, name, value } = attribute
+        const x = last[key]
+        if (x == null || x.value !== value) {
+          if (namespaceURI == null) {
+            if (value == null) {
+              log = Diff.removeAttribute(log, name)
+            } else {
+              log = Diff.setAttribute(log, name, value)
+            }
+          } else {
+            if (value == null) {
+              log = Diff.removeAttributeNS(log, namespaceURI, name)
+            } else {
+              log = Diff.setAttributeNS(log, namespaceURI, name, value)
+            }
+          }
+        }
+      }
+    }
+
+    return log
+  }
+
+  const diffStyle = (last, next, log) => {
+    for (let name in last) {
+      if (name !== "settingType") {
+        if (!(name in next) && last[name] != null) {
+          log = Diff.removeStyleRule(log, name)
+        }
+      }
+    }
+
+    for (let name in next) {
+      if (name != "settingType") {
+        const value = next[name]
+        const lastValue = last[name]
+        if (lastValue !== value) {
+          if (value == null) {
+            if (lastValue != null) {
+              log = Diff.removeStyleRule(log, name)
+            }
+          } else {
+            log = Diff.setStyleRule(log, name, value)
+          }
+        }
+      }
+    }
+
+    return log
+  }
+
+  const isEqualListeners = (last, next) => {
+    return (
+      last.type === next.type &&
+      last.capture === next.capture &&
+      JSON.stringify(last.decoder) === JSON.stringify(next.decoder)
+    )
+  }
+
+  const diffListeners = (last, next, log) => {
+    for (let name in last) {
+      if (!(name in next)) {
+        const listener = last[name]
+        if (listener) {
+          const { type, capture, decoder } = listener
+          log = Diff.removeEventDecoder(log, type, decoder, capture)
+        }
+      }
+    }
+
+    for (let name in next) {
+      const nextListener = next[name]
+      const lastListener = last[name]
+
+      const [remove, add] =
+        lastListener && !nextListener
+          ? [lastListener, null]
+          : !lastListener && nextListener
+            ? [null, nextListener]
+            : lastListener &&
+              nextListener &&
+              isEqualListeners(lastListener, nextListener)
+              ? [null, null]
+              : [lastListener, nextListener]
+
+      if (remove) {
+        const { type, capture, decoder } = remove
+        log = Diff.removeEventDecoder(log, type, decoder, capture)
+      }
+      if (add) {
+        const { type, capture, decoder } = add
+        log = Diff.addEventDecoder(log, type, decoder, capture)
+      }
+    }
+
+    return log
   }
 
   /**
    * Library for representing the `Result` of a computation that may fail. Which
    * is a more type friendly way to handle errors than exceptions.
    */
-
-  const ok = value => new Ok(value)
-
-  const error = error => new Error$1(error)
 
   const anArticle = /^(a|e[^u]|i|o|u)/i
 
@@ -859,14 +1956,6 @@
    * contains `Decoder.Error` if value can't be decoded with a given decoder or
    * a `Result.Ok<a>`.
    */
-  const decode = (decoder, json) => {
-    const value = decode$1(decoder, json)
-    if (value instanceof Error$2) {
-      return error(value)
-    } else {
-      return ok(value)
-    }
-  }
 
   const String$1 = new String$2()
 
@@ -882,11 +1971,16 @@
 
   const field = (name, decoder) => new Field(name, decoder)
 
+  const at = (path, decoder) =>
+    path.reduceRight((decoder, name) => field(name, decoder), decoder)
+
   const index = (index, decoder) => new Index(index, decoder)
 
   const accessor = (name, decoder) => new Accessor(name, decoder)
 
   const either = (...decoders) => new Either(decoders)
+
+  const or$1 = either
 
   const and$1 = (left, right) => new And(left, right)
 
@@ -909,402 +2003,6 @@
   const match = value => new Match(value)
 
   const empty$3 = Object.freeze([])
-
-  const ELEMENT_NODE = 1
-  const TEXT_NODE = 3
-  const COMMENT_NODE = 8
-
-  const insertNode$1 = (target, childrenSelected, node) => {
-    if (childrenSelected) {
-      return target.insertBefore(node, target.firstChild)
-    } else {
-      const parent = target.parentNode
-      if (parent == null) {
-        throw Error(
-          "Inavalid state. Unable to add a sibling to an orphand node"
-        )
-      }
-
-      return parent.insertBefore(node, target.nextSibling)
-    }
-  }
-
-  const removeNode = target => {
-    const parent = target.parentNode
-    if (parent == null) {
-      throw Error("Unable to remove orphand node")
-    } else {
-      return parent.removeChild(target)
-    }
-  }
-
-  const replaceNode = (state, node) => {
-    if (state.childrenSelected) {
-      throw Error(
-        "Invalid state. Unable to replace node when children are seleted"
-      )
-    }
-    const parent = state.target.parentNode
-    if (parent == null) {
-      throw Error("Ivarid state. Unable to replace an orphand node")
-    }
-
-    parent.replaceChild(node, state.target)
-    state.target = node
-    return state
-  }
-
-  const getTextDataUpdateTarget = (selectChildren, target) => {
-    if (selectChildren) {
-      throw Error("Unable to edit text data when children are selected")
-    }
-    switch (target.nodeType) {
-      case TEXT_NODE:
-        return target
-      case COMMENT_NODE: {
-        return target
-      }
-      default: {
-        throw Error(
-          "Unable to edit text data as neither Text nor Comment node is selected"
-        )
-      }
-    }
-  }
-
-  const getUpdateTargetElement = (selectChildren, target) => {
-    if (selectChildren) {
-      throw new Error("Unable to update node when children are selected.")
-    } else if (target.nodeType === ELEMENT_NODE) {
-      return target
-    } else {
-      throw new Error(
-        "Unable to update element when text or comment node is selected"
-      )
-    }
-  }
-
-  const getTargetStyle = (selectChildren, target) => {
-    if (selectChildren) {
-      throw new Error("Unable to update node when children are selected.")
-    } else if (target.style) {
-      return target.style
-    } else {
-      throw new Error("Target node does not support styling")
-    }
-  }
-
-  const getStashedNode = (stash, address) => {
-    const node = stash[address]
-    if (node == null) {
-      throw Error(`Unable to find stashed node with address #${address}`)
-    } else {
-      return node
-    }
-  }
-
-  class DOMPatch {
-    reset(target, childrenSelected, stash, mailbox) {
-      this.target = target
-      this.childrenSelected = childrenSelected
-      this.stash = stash
-      this.mailbox = mailbox
-    }
-
-    static selectChildren(state) {
-      if (state.childrenSelected) {
-        throw Error(
-          "Inavlid state: Unable to select children as they are already selected"
-        )
-      } else {
-        state.childrenSelected = true
-        return state
-      }
-    }
-    static selectSibling(state, offset) {
-      const { target, childrenSelected } = state
-      let select = null
-      if (childrenSelected) {
-        state.childrenSelected = false
-        select = target.childNodes[offset - 1]
-      } else {
-        select = target
-        while (select && offset--) {
-          select = select.nextSibling
-        }
-      }
-
-      if (select == null) {
-        throw Error(
-          "sibling selection has failed, sibling being selected does not exist"
-        )
-      } else {
-        state.target = select
-        state.childrenSelected = false
-        return state
-      }
-    }
-    static selectParent(state) {
-      if (state.childrenSelected) {
-        state.childrenSelected = false
-        return state
-      } else {
-        const target = state.target.parentNode
-        if (target == null) {
-          throw Error("Can not select parent of orphand node")
-        } else {
-          state.target = target
-          return state
-        }
-      }
-    }
-    static removeNextSibling(state) {
-      const { childrenSelected, target } = state
-      const [parent, next] = childrenSelected
-        ? [target, target.firstChild]
-        : [target.parentNode, target.nextSibling]
-
-      if (next == null) {
-        throw Error("Can not remove next sibling as it does not exist")
-      } else if (parent == null) {
-        throw Error("Can not remove next sibling as it has not parent")
-      } else {
-        parent.removeChild(next)
-        return state
-      }
-    }
-
-    static insertText(state, data) {
-      insertNode$1(
-        state.target,
-        state.childrenSelected,
-        state.target.ownerDocument.createTextNode(data)
-      )
-      return state
-    }
-    static insertComment(state, data) {
-      insertNode$1(
-        state.target,
-        state.childrenSelected,
-        state.target.ownerDocument.createComment(data)
-      )
-      return state
-    }
-    static insertElement(state, localName) {
-      insertNode$1(
-        state.target,
-        state.childrenSelected,
-        state.target.ownerDocument.createElement(localName)
-      )
-      return state
-    }
-    static insertElementNS(state, namespaceURI, localName) {
-      insertNode$1(
-        state.target,
-        state.childrenSelected,
-        state.target.ownerDocument.createElementNS(namespaceURI, localName)
-      )
-      return state
-    }
-    static insertStashedNode(state, address) {
-      insertNode$1(
-        state.target,
-        state.childrenSelected,
-        getStashedNode(state.stash, address)
-      )
-      return state
-    }
-
-    static replaceWithText(state, data) {
-      return replaceNode(state, state.target.ownerDocument.createTextNode(data))
-    }
-    static replaceWithComment(state, data) {
-      return replaceNode(state, state.target.ownerDocument.createComment(data))
-    }
-    static replaceWithElement(state, localName) {
-      return replaceNode(
-        state,
-        state.target.ownerDocument.createElement(localName)
-      )
-    }
-    static replaceWithElementNS(state, namespaceURI, localName) {
-      return replaceNode(
-        state,
-        state.target.ownerDocument.createElementNS(namespaceURI, localName)
-      )
-    }
-    static replaceWithStashedNode(state, address) {
-      const node = state.stash[address]
-      if (node == null) {
-        throw Error(`Unable to find stashed node with address #${address}`)
-      }
-      return replaceNode(state, node)
-    }
-
-    static editTextData(state, start, end, prefix, suffix) {
-      const node = getTextDataUpdateTarget(state.childrenSelected, state.target)
-      const { data } = node
-      const content = data.substring(start, data.length - end)
-      node.data = `${prefix}${content}${suffix}`
-      return state
-    }
-    static setTextData(state, data) {
-      const node = getTextDataUpdateTarget(state.childrenSelected, state.target)
-      node.data = data
-      return state
-    }
-    static setAttribute(state, name, value) {
-      const node = getUpdateTargetElement(state.childrenSelected, state.target)
-      node.setAttribute(name, value)
-      return state
-    }
-    static removeAttribute(state, name) {
-      const node = getUpdateTargetElement(state.childrenSelected, state.target)
-      node.removeAttribute(name)
-      return state
-    }
-    static setAttributeNS(state, namespaceURI, name, value) {
-      const node = getUpdateTargetElement(state.childrenSelected, state.target)
-      node.setAttributeNS(namespaceURI, name, value)
-      return state
-    }
-    static removeAttributeNS(state, namespaceURI, name) {
-      const node = getUpdateTargetElement(state.childrenSelected, state.target)
-      node.removeAttributeNS(namespaceURI, name)
-      return state
-    }
-    static assignProperty(state, name, value) {
-      const node = getUpdateTargetElement(state.childrenSelected, state.target)
-      node[name] = value
-      return state
-    }
-    static deleteProperty(state, name) {
-      const node = getUpdateTargetElement(state.childrenSelected, state.target)
-      delete node[name]
-      return state
-    }
-    static setStyleRule(state, name, value) {
-      const style = getTargetStyle(state.childrenSelected, state.target)
-      style[name] = value
-      return state
-    }
-    static removeStyleRule(state, name) {
-      const style = getTargetStyle(state.childrenSelected, state.target)
-      style[name] = ""
-      return state
-    }
-    static addEventDecoder(state, type, decoder, capture$$1) {
-      const node = getUpdateTargetElement(state.childrenSelected, state.target)
-      const host =
-        node.DOMinion || (node.DOMinion = new DOMinion(state.mailbox))
-      host.addEventDecoder(node, type, decoder, capture$$1)
-      return state
-    }
-    static removeEventDecoder(state, type, decoder, capture$$1) {
-      const node = getUpdateTargetElement(state.childrenSelected, state.target)
-      const host =
-        node.DOMinion || (node.DOMinion = new DOMinion(state.mailbox))
-      host.removeEventDecoder(node, type, decoder, capture$$1)
-      return state
-    }
-
-    static stashNextSibling(state, address) {
-      const next = state.childrenSelected
-        ? state.target.firstChild
-        : state.target.nextSibling
-
-      if (next == null) {
-        throw Error("Unable to stash next sibling as there is not one")
-      } else {
-        state.stash[address] = next
-        removeNode(next)
-        return state
-      }
-    }
-    static discardStashedNode(state, address) {
-      delete state.stash[address]
-      return state
-    }
-
-    static shiftSiblings(state, count) {
-      const { target, childrenSelected } = state
-      let select = null
-      if (childrenSelected) {
-        select = target.childNodes[count]
-      } else {
-        let offset = count
-        select = target.nextSibling
-        while (select && offset--) {
-          select = select.nextSibling
-        }
-      }
-
-      if (select == null) {
-        throw Error(`Not enough siblings ${count} to shift them`)
-      } else {
-        insertNode$1(target, childrenSelected, select)
-      }
-      return state
-    }
-
-    static archive(target, receive = DOMArchive.receive) {
-      return new DOMArchive(target, receive)
-    }
-  }
-
-  const CAPTURING_PHASE = 1
-
-  class DOMinion {
-    constructor(mailbox) {
-      this.mailbox = mailbox
-      this.decoders = Object.create(null)
-    }
-    static handleEvent(event) {
-      const { currentTarget, type, eventPhase } = event
-      const node = currentTarget
-      const host = node.DOMinion
-      const capture$$1 = event.eventPhase === CAPTURING_PHASE
-      if (host) {
-        const hash = `${event.type}${capture$$1 ? "!" : "^"}`
-        const decoder = host.decoders[hash]
-        if (decoder) {
-          const detail = decode(decoder, event)
-          host.mailbox.send(detail, event)
-          return null
-        }
-      }
-      currentTarget.removeEventListener(type, DOMinion.handleEvent, capture$$1)
-    }
-    addEventDecoder(target, type, decoder, capture$$1) {
-      const hash = `${type}${capture$$1 ? "!" : "^"}`
-      this.decoders[hash] = decoder
-      target.addEventListener(type, DOMinion.handleEvent, capture$$1)
-    }
-    removeEventDecoder(target, type, decoder, capture$$1) {
-      const hash = `${type}${capture$$1 ? "!" : "^"}`
-      delete this.decoders[hash]
-    }
-  }
-
-  class DOMArchive {
-    constructor(target, receive = DOMArchive.receive) {
-      this.cursor = new DOMPatch()
-
-      this.target = target
-      this.mailbox = { send: receive }
-    }
-    patch(changeList) {
-      this.cursor.reset(this.target, false, {}, this.mailbox)
-      const result = changeList.encode(DOMPatch, this.cursor)
-      if (result instanceof DOMPatch) {
-        return this.target
-      } else {
-        return result
-      }
-    }
-  }
-
-  DOMArchive.receive = (message, event) => {}
 
   /**
    * Dictionary class used across the library to create `Dict` instances.
@@ -1362,6 +2060,7 @@
    * }
    * ```
    */
+  const empty$4 = () => new Dictionary()
 
   /**
    * Create a dictionary with one entry of given key, value pair.
@@ -1373,6 +2072,11 @@
    *
    * Note that as with `empty` returned dictionary has open type for values.
    */
+  const singleton$1 = (key, value) => {
+    const result = new Dictionary()
+    result[key] = value
+    return result
+  }
 
   /**
    * Create a dictionary from iterable of `[key, value]` pairs
@@ -1405,6 +2109,7 @@
    * v2 // => ({a:1, b:15}:Dict<number>)
    * ```
    */
+  const set$1 = (key, value, dict) => ((dict[key] = value), dict)
 
   /**
    * Updates the entry in the dictionary for a given key with a provided
@@ -1628,8 +2333,610 @@
    */
 
   const empty = Object.freeze([])
+  const blank = empty$4()
 
-  const mount = DOMPatch.archive
+  class AttributeSetting {
+    constructor(namespaceURI, name, value) {
+      this.settingType = settingType.attribute
+
+      this.namespaceURI = namespaceURI
+      this.name = name
+      this.value = value
+    }
+  }
+
+  class PropertySetting {
+    constructor(name, value) {
+      this.settingType = settingType.property
+
+      this.name = name
+      this.value = value
+    }
+  }
+
+  class ListenerSetting {
+    constructor(type, capture, decoder) {
+      this.settingType = settingType.listener
+
+      this.type = type
+      this.capture = capture
+      this.decoder = decoder
+    }
+  }
+
+  class TextNode {
+    constructor(data) {
+      this.nodeType = nodeType.TEXT_NODE
+
+      this.data = data
+    }
+    toDebugString() {
+      return `#${this.data}`
+    }
+    map(tag) {
+      return this
+    }
+  }
+
+  class TaggedNode {
+    constructor(node, tag) {
+      this.nodeType = nodeType.TAGGED_ELEMENT_NODE
+
+      this.node = node
+      this.tag = tag
+    }
+    toDebugString() {
+      return `<tagged tag=${this.tag.toString()}>${this.node.toDebugString()}</tagged>`
+    }
+    map(tag) {
+      return new TaggedNode(this, tag)
+    }
+  }
+
+  class ElementNode {
+    constructor(namespaceURI, localName) {
+      this.attributes = blank
+      this.properties = blank
+      this.style = blank
+      this.listeners = blank
+
+      this.namespaceURI = namespaceURI
+      this.localName = localName
+    }
+    toDebugChildrenString() {
+      return ""
+    }
+    toDebugString() {
+      const { localName, namespaceURI } = this
+      const attributes = []
+
+      if (namespaceURI != null) {
+        attributes.push(`xmlns="${namespaceURI}"`)
+      }
+
+      for (const key in this.attributes) {
+        const attribute = this.attributes[key]
+        if (attribute != null && attribute.value != null) {
+          attributes.push(`"${attribute.name}"="${attribute.value}"`)
+        }
+      }
+
+      const properties = []
+      for (const key in this.properties) {
+        const value = this.properties[key]
+        if (value !== undefined) {
+          properties.push(`\`property:${key}\`=\`${JSON.stringify(value)}\``)
+        }
+      }
+
+      const rules = []
+      for (const name in this.style) {
+        if (name !== "settingType") {
+          const value = this.style[name]
+          if (value != null) {
+            rules.push(`${cammelCaseToDashDelimeted(name)}:${value}`)
+          }
+        }
+      }
+
+      const style = rules.length === 0 ? "" : ` style="${rules.join(";")}"`
+
+      const settings = [...attributes, ...properties].join(" ")
+      const details = settings === "" ? style : ` ${settings}${style}`
+
+      return `<${localName}${details}>${this.toDebugChildrenString()}</${
+        localName
+      }>`
+    }
+  }
+
+  const cammelCaseToDashDelimeted = input => {
+    let output = ""
+    for (let ch of input) {
+      if (ch.toUpperCase() == ch) {
+        output += `-${ch.toLowerCase()}`
+      } else {
+        output += ch
+      }
+    }
+    return output
+  }
+
+  const setSettings = (element, settings) => {
+    for (const setting of settings) {
+      setSetting(element, setting)
+    }
+  }
+
+  const set = (name, value, dict) =>
+    dict === blank ? singleton$1(name, value) : set$1(name, value, dict)
+
+  const setSetting = (element, setting) => {
+    switch (setting.settingType) {
+      case settingType.attribute: {
+        const ns =
+          setting.namespaceURI == null ? "" : `@${setting.namespaceURI}`
+        element.attributes = set(
+          `${setting.name}${ns}`,
+          setting,
+          element.attributes
+        )
+        return element
+      }
+      case settingType.property: {
+        element.properties = set(
+          setting.name,
+          setting.value,
+          element.properties
+        )
+        return element
+      }
+      case settingType.style: {
+        element.style =
+          element.style === blank
+            ? Object.assign(Object.create(null), setting)
+            : Object.assign(element.style, setting)
+        return element
+      }
+      case settingType.listener: {
+        const key = `${setting.type}${setting.capture ? "Capture" : ""}`
+        element.listeners = set(key, setting, element.listeners)
+
+        return element
+      }
+      default: {
+        return unreachable(setting)
+      }
+    }
+  }
+
+  class UnindexedElementNode extends ElementNode {
+    constructor(...args) {
+      var _temp
+
+      return (
+        (_temp = super(...args)), (this.nodeType = nodeType.ELEMENT_NODE), _temp
+      )
+    }
+
+    toDebugChildrenString() {
+      return this.children.map(child => child.toDebugString()).join("")
+    }
+    map(tag) {
+      return new TaggedNode(this, tag)
+    }
+  }
+
+  const setAttribute = (name, value = "") =>
+    new AttributeSetting(null, name, value == null ? null : value)
+
+  const property$1 = (name, value) => new PropertySetting(name, value)
+
+  const on$1 = (type, decoder, capture = false) =>
+    new ListenerSetting(type, capture, decoder)
+
+  const style = rules => {
+    const style = rules
+    style.settingType = settingType.style
+    return style
+  }
+
+  const createTextNode = data => new TextNode(data)
+
+  const createElement = (localName, settings = empty, children = empty) => {
+    const element = new UnindexedElementNode(null, localName)
+    setSettings(element, settings)
+    element.children = children
+    return element
+  }
+
+  const createHost = (settings = empty, children = empty) =>
+    createElement("x-host", settings, children)
+
+  const text = data => createTextNode(data)
+  const element = name => (settings = [], children = []) =>
+    createElement(name, settings, children)
+  const attribute = name => (value = "") => setAttribute(name, value)
+  const property = name => value => property$1(name, value)
+
+  const className = attribute("class")
+  const header = element("header")
+  const h1 = element("h1")
+  const input = element("input")
+  const placeholder = attribute("placeholder")
+  const autofocus = attribute("autofocus")
+  const defaultValue = property("defaultValue")
+  const value = property("value")
+  const section = element("section")
+  const label = element("label")
+  const ul = element("ul")
+  const li = element("li")
+  const div = element("div")
+  const button = element("button")
+  const footer = element("footer")
+  const span = element("span")
+  const a = element("a")
+
+  const strong = element("strong")
+  const id = attribute("id")
+  const href = attribute("href")
+  const type = attribute("type")
+  const For = attribute("for")
+  const checked = attribute("checked")
+  const on = type => (decoder, capture = false) => on$1(type, decoder, capture)
+  const onClick = on("click")
+  const onInput = on("input")
+  const onBlur = on("blur")
+  const onKeyDown = on("keydown")
+  const onDoubleClick = on("dblclick")
+
+  const visible = visible =>
+    style({ visibility: visible ? "visible" : "hidden" })
+
+  const EnterKey = field("keyCode", match(13))
+
+  const onEnter = decoder =>
+    onKeyDown(or$1(and$1(EnterKey, decoder), ok$1(null)))
+
+  const unreachable$2 = value => {
+    const format = JSON.stringify(value)
+    throw new TypeError(
+      `Internal error: Encountered impossible value: ${format}`
+    )
+  }
+
+  const view$1 = model =>
+    li(
+      [className(model.completed ? "completed" : model.edits ? "editing" : "")],
+      [
+        div(
+          [className("view")],
+          [
+            input([
+              className("toggle"),
+              type("checkbox"),
+              checked(model.completed ? "" : null),
+              onClick(Complete(!model.completed))
+            ]),
+            label(
+              [onDoubleClick(Enter)],
+              [text(model.edits || model.description)]
+            ),
+            button([className("destroy"), onClick(Delete$1)])
+          ]
+        ),
+        input([
+          id(`todo-${model.id}`),
+          className("edit"),
+          defaultValue(model.edits),
+          onInput(Edit),
+          onBlur(Commit),
+          onEnter(Commit)
+        ])
+      ]
+    )
+
+  class Model$1 {
+    constructor(id$$1, description, completed, edits) {
+      this.id = id$$1
+      this.description = description
+      this.completed = completed
+      this.edits = edits
+    }
+    static new(id$$1, description) {
+      return new Model$1(id$$1, description, false, null)
+    }
+    static updateEdits(model, edits) {
+      return new Model$1(model.id, model.description, model.completed, edits)
+    }
+    static updateComplete(model, value$$1) {
+      return new Model$1(model.id, model.description, value$$1, model.edits)
+    }
+    static enter(model) {
+      return Model$1.updateEdits(model, model.description)
+    }
+    static delete(model) {
+      return null
+    }
+    static cancel(model) {
+      return new Model$1(model.id, model.description, model.completed, null)
+    }
+    static commit(model) {
+      const { edits } = model
+      if (edits == null) {
+        return model
+      } else {
+        const description = edits.trim()
+        if (description === "") {
+          return Model$1.delete(model)
+        } else {
+          return new Model$1(model.id, description, model.completed, null)
+        }
+      }
+    }
+  }
+
+  const update$2 = (message, model) => {
+    switch (message.type) {
+      case "complete": {
+        return Model$1.updateComplete(model, message.complete)
+      }
+      case "enter": {
+        return Model$1.enter(model)
+      }
+      case "edit": {
+        return Model$1.updateEdits(model, message.edit)
+      }
+      case "delete": {
+        return Model$1.delete(model)
+      }
+      case "cancel": {
+        return Model$1.cancel(model)
+      }
+      case "commit": {
+        return Model$1.commit(model)
+      }
+      default:
+        return unreachable$2(message)
+    }
+  }
+
+  const Edit = form({
+    type: ok$1("edit"),
+    edit: at(["target", "value"], String$1)
+  })
+
+  const Enter = ok$1({ type: "enter" })
+  const Commit = ok$1({ type: "commit" })
+  const Delete$1 = ok$1({ type: "delete" })
+  const Complete = complete =>
+    ok$1({
+      type: "complete",
+      complete
+    })
+
+  class Model {
+    constructor(tasks, visibility, field$$1, uid) {
+      this.tasks = tasks
+      this.visibility = visibility
+      this.field = field$$1
+      this.uid = uid
+    }
+    static new() {
+      return new Model([], "All", "", 0)
+    }
+    static updateField(model, field$$1) {
+      if (model.field === field$$1) {
+        return model
+      } else {
+        return new Model(model.tasks, model.visibility, field$$1, model.uid)
+      }
+    }
+    static addTask(model, description) {
+      if (description === "") {
+        return model
+      } else {
+        const newTask = Model$1.new(model.uid, description)
+        return new Model(
+          [...model.tasks, newTask],
+          model.visibility,
+          "",
+          model.uid + 1
+        )
+      }
+    }
+    static updateTasks(model, tasks) {
+      return new Model(tasks, model.visibility, model.field, model.uid)
+    }
+    static updateVisibility(model, visibility) {
+      return new Model(model.tasks, visibility, model.field, model.uid)
+    }
+  }
+
+  class UpdateTask {
+    constructor(id$$1, message) {
+      this.type = "UpdateTask"
+
+      this.id = id$$1
+      this.message = message
+    }
+    static new(id$$1, message) {
+      return new UpdateTask(id$$1, message)
+    }
+  }
+
+  const update = (message, model) => {
+    switch (message.type) {
+      case "UpdateField": {
+        const newModel = Model.updateField(model, message.field)
+        return [newModel, save(newModel)]
+      }
+      case "Add": {
+        const description = model.field.trim()
+        const newModel = Model.addTask(model, description)
+        return [newModel, save(newModel)]
+      }
+      case "UpdateTask": {
+        const { id: id$$1, message: taskMessage } = message
+        const updateTask = task => {
+          if (task.id === id$$1) {
+            return update$2(taskMessage, task)
+          } else {
+            return task
+          }
+        }
+
+        const newTasks = filterMap(updateTask, model.tasks)
+        const newModel = Model.updateTasks(model, newTasks)
+        return [newModel, save(model)]
+      }
+      case "DeleteComplete": {
+        const newTasks = model.tasks.filter(task => !task.completed)
+        const newModel = Model.updateTasks(model, newTasks)
+        return [newModel, save(model)]
+      }
+      case "CheckAll": {
+        const { value: value$$1 } = message
+        const updateTask = task => Model$1.updateComplete(task, value$$1)
+        const newTasks = model.tasks.map(updateTask)
+        const newModel = Model.updateTasks(model, newTasks)
+        return [newModel, save(model)]
+      }
+      case "ChangeVisibility": {
+        const { visibility } = message
+        const newModel = Model.updateVisibility(model, visibility)
+        return [newModel, save(model)]
+      }
+      default: {
+        return unreachable$2(message)
+      }
+    }
+  }
+
+  const viewEntry = inputValue =>
+    header(
+      [className("header")],
+      [
+        h1([], [text("todos")]),
+        input([
+          className("new-todo"),
+          placeholder("What needs to be done?"),
+          autofocus(),
+          value(inputValue),
+          onInput(UpdateField),
+          onEnter(Add)
+        ])
+      ]
+    )
+
+  const viewMain = (tasks, visibility) =>
+    section(
+      [className("main"), visible(tasks.length > 0)],
+      [
+        input([id("toggle-all"), className("toggle-all"), type("checkbox")]),
+        label([For("toggle-all")], [text("Mark all as complete")]),
+        viewTaskList(tasks, visibility)
+      ]
+    )
+
+  const viewTaskList = (tasks, visibility) =>
+    ul(
+      [className("todo-list")],
+      tasks
+        .filter(task => {
+          switch (visibility) {
+            case "Active":
+              return !task.completed
+            case "Completed":
+              return task.completed
+            default:
+              return true
+          }
+        })
+        .map(viewTask)
+    )
+
+  const viewTask = model =>
+    view$1(model).map(message => UpdateTask.new(model.id, message))
+
+  const viewControls = (tasks, visibility) => {
+    const count = tasks.length
+    const complete = tasks.filter(task => task.completed).length
+    const remaining = count - complete
+    const item = remaining === 1 ? "item" : "items"
+
+    return footer(
+      [className("footer"), visible(count > 0)],
+      [
+        span(
+          [className("todo-count")],
+          [strong([], [text(`${remaining}`)]), text(`${item} left`)]
+        ),
+        ul(
+          [className("filters")],
+          [
+            viewControl("", "All", visibility),
+            viewControl("active", "Active", visibility),
+            viewControl("completed", "Completed", visibility)
+          ]
+        ),
+        button([className("clear-completed")], [text("Clear completed")])
+      ]
+    )
+  }
+
+  const viewControl = (path, visibility, select) => {
+    const selection = className(visibility === select ? "selected" : "")
+    return li(
+      [onClick(ChangeVisibility(visibility))],
+      [a([href(`#/${path}`), selection], [text(visibility)])]
+    )
+  }
+
+  const view = model =>
+    section(
+      [className("todoapp")],
+      [
+        viewEntry(model.field),
+        viewMain(model.tasks, model.visibility),
+        viewControls(model.tasks, model.visibility)
+      ]
+    )
+
+  const UpdateField = form({
+    type: ok$1("UpdateField"),
+    field: at(["target", "value"], String$1)
+  })
+
+  const ChangeVisibility = visibility =>
+    form({
+      type: ok$1("ChangeVisibility"),
+      visibility: ok$1(visibility)
+    })
+
+  const Add = form({
+    type: ok$1("Add")
+  })
+
+  const save = model => () => {}
+
+  const filterMap = (f, items) => {
+    const out = []
+    for (let item of items) {
+      const postItem = f(item)
+      if (postItem != null) {
+        out.push(postItem)
+      }
+    }
+    return out
+  }
+
+  var Todos = Object.freeze({
+    Model: Model,
+    update: update,
+    viewMain: viewMain,
+    view: view
+  })
 
   /// @file
   /// @addtogroup flatbuffers_javascript_api
@@ -10284,65 +11591,78 @@
   FlatBuffer.encode = FlatBufferEncoder.encode
   FlatBuffer.decode = FlatBufferDecoder.decode
 
-  const worker = new Worker("./js/worker.js")
+  const ELEMENT_NODE = 1
+  const TAGGED_ELEMENT_NODE = 22
+  const THUNK_NODE = 23
 
-  const indexOf = (child, parent) => {
-    let index$$1 = 0
-    let node = parent.firstChild
-    while (node) {
-      if (node === child) {
-        return index$$1
+  class Program {
+    constructor({ view: view$$1, update: update$$1 }) {
+      this.node = createHost()
+
+      this.view = view$$1
+      this.update = update$$1
+    }
+    transact(state) {
+      const node = createHost([], [this.view(state)])
+      const changeList = FlatBuffer.encode(diff(this.node, node))
+      if (changeList.isError === true) {
+        console.error(changeList)
       } else {
-        index$$1++
-        node = node.nextSibling
+        const { buffer, byteOffset } = changeList
+
+        this.state = state
+        this.node = node
+        self.postMessage({ buffer, byteOffset }, [buffer])
       }
     }
-
-    return null
-  }
-
-  const getPath = (from, to) => {
-    let path = []
-    let node = from
-    while (node !== to) {
-      const { parentNode } = node
-      if (parentNode) {
-        const n = indexOf(node, parentNode)
-        if (n == null) {
-          return null
-        } else {
-          path.unshift(n)
-          node = parentNode
+    send(payload, path) {
+      const action = Program.toMessage(this.node, path, payload)
+      if (action) {
+        console.log(action)
+        const [state, fx] = this.update(action, this.state)
+        this.transact(state)
+      } else {
+        console.error("Message receiver not found", path, payload)
+      }
+    }
+    static toMessage(root, path, payload) {
+      const tags = []
+      let node = root
+      let index = 0
+      const count = path.length
+      while (index < count) {
+        const n = path[index]
+        switch (node.nodeType) {
+          case ELEMENT_NODE: {
+            node = node.children[n]
+            index++
+            break
+          }
+          case TAGGED_ELEMENT_NODE: {
+            tags.unshift(node.tag)
+            node = node.node
+            break
+          }
+          case THUNK_NODE: {
+            node = node.force()
+            break
+          }
+          default: {
+            return null
+          }
         }
-      } else {
-        return null
       }
+
+      let tagged = payload
+      for (const tag of tags) {
+        tagged = tag(tagged)
+      }
+      return tagged
     }
-    return path
   }
 
-  const host = mount(window.document.body, (result, event) => {
-    if (result.isOk) {
-      const { value: value$$1 } = result
-      if (value$$1 != null) {
-        const path = getPath(event.currentTarget, window.document.body)
-        worker.postMessage({
-          message: value$$1,
-          path
-        })
-      }
-    } else {
-      console.error(result.error)
-    }
-  })
-
-  worker.onmessage = event => {
-    const { buffer, byteOffset } = event.data
-    const changeList = new Uint8Array(buffer, byteOffset)
-    const result = patch(host, FlatBuffer.decode(changeList))
-    if (result.isError) {
-      console.error(result)
-    }
-  }
+  const program = new Program(Todos)
+  program.transact(Model.new())
+  self.onmessage = event => program.send(event.data.message, event.data.path)
 })()
-//# sourceMappingURL=app.js.map
+//# sourceMappingURL=worker.js.map

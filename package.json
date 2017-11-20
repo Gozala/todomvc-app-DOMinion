@@ -2,6 +2,72 @@
   "private": true,
   "dependencies": {
     "todomvc-app-css": "^2.0.0",
-    "todomvc-common": "^1.0.0"
+    "todomvc-common": "^1.0.0",
+    "unreachable": "0.2.0"
+  },
+  "devDependencies": {
+    "alias-quokka-plugin": "^0.1.0",
+    "babel-cli": "^6.26.0",
+    "babel-preset-flow-node": "^1.0.2",
+    "babel-preset-flow-syntax": "1.0.1",
+    "babel-register": "^6.26.0",
+    "blue-tape": "^1.0.0",
+    "documentation": "^5.3.2",
+    "flatbuffers": "^1.7.0",
+    "flow-bin": "0.59.0",
+    "flow-copy-source": "^1.2.1",
+    "husky": "^0.14.0",
+    "jsdom": "^11.2.0",
+    "jsdom-quokka-plugin": "^1.0.6",
+    "lint-staged": "^4.2.1",
+    "prettier": "^1.7.0",
+    "rollup": "0.51.5",
+    "rollup-plugin-babel": "3.0.2",
+    "rollup-plugin-commonjs": "8.2.6",
+    "rollup-plugin-flow": "1.1.1",
+    "rollup-plugin-json": "2.3.0",
+    "rollup-plugin-legacy": "1.0.0",
+    "rollup-plugin-livereload": "0.6.0",
+    "rollup-plugin-node-resolve": "3.0.0",
+    "rollup-plugin-serve": "0.4.2"
+  },
+  "scripts": {
+    "test": "npm run test:flow && npm run test:tape",
+    "test:tape": "blue-tape -r babel-register 'test/**/*.js'",
+    "test:flow": "flow check",
+    "build:clear": "rm -rf lib",
+    "build:types": "flow-copy-source --verbose src lib",
+    "build:node": "babel --out-dir lib src",
+    "build:api": "documentation readme --section=API src/dominion.js",
+    "build:docs": "documentation build --document-exported src/** -f html --o docs",
+    "build:schema": "npm run build:schema:ChangeLog && npm run build:schema:Decoder && npm run build:schema:JSON",
+    "build:schema:ChangeLog": "flatc --ts src/Format/FlatBuffer/ChangeLog.fbs/ChangeLog.fbs && mv ChangeLog_generated.ts src/Format/FlatBuffer/ChangeLog.fbs/ChangeLog.ts",
+    "build:schema:Decoder": "flatc --ts src/Format/FlatBuffer/Decoder.fbs/Decoder.fbs && mv Decoder_generated.ts src/Format/FlatBuffer/Decoder.fbs/Decoder.ts",
+    "build:schema:JSON": "flatc --ts src/Format/FlatBuffer/JSON.fbs/JSON.fbs && mv JSON_generated.ts src/Format/FlatBuffer/JSON.fbs/JSON.ts",
+    "build:bundle": "rollup -c",
+    "build": "npm run build:node && npm run build:types",
+    "prepublish": "npm run build && npm test",
+    "precommit": "lint-staged",
+    "start": "flow-copy-source --watch --verbose src lib & babel --watch --out-dir lib src"
+  },
+  "lint-staged": {
+    "*.js": [
+      "prettier --parser flow --no-semi --write",
+      "git add"
+    ]
+  },
+  "quokka": {
+    "alias": {
+      "dominion": "src/DOMinion"
+    },
+    "jsdom": {
+      "html": "<html><body></body></html>"
+    },
+    "pro": true,
+    "babel": true,
+    "plugins": [
+      "alias-quokka-plugin",
+      "jsdom-quokka-plugin"
+    ]
   }
 }
