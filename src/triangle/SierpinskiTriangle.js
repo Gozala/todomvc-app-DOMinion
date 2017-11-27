@@ -75,7 +75,6 @@ export const view = (
       ]
     ).map(TagDot.new)
   } else {
-    const newSize = size / 2
     let slowDown = true
     if (slowDown) {
       var e = performance.now() + 0.8

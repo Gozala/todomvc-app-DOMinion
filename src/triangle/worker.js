@@ -4,6 +4,7 @@ import * as Triangles from "./Triangles"
 import FlatBuffer from "dominion/src/Format/FlatBuffer"
 import * as DOMinion from "dominion"
 import { requestAnimationFrame } from "request-polyfilled-animation-frame"
+import * as vsync from "preemptive-animation-frame"
 
 const DOCUMENT_FRAGMENT_NODE = 11
 const ELEMENT_NODE = 1
@@ -11,10 +12,11 @@ const INDEXED_ELEMENT_NODE = 21
 const TAGGED_ELEMENT_NODE = 22
 const THUNK_NODE = 23
 
-class Program<message, model> {
+class Program<message, model: { useTimeSlicing: boolean }> {
   state: model
   node: DOMinion.Node<message> = DOMinion.createHost()
   view: model => DOMinion.Node<message>
+  requestID: ?number = null
   update: (message, model) => [model, () => void]
   constructor({
     view,
@@ -34,16 +36,33 @@ class Program<message, model> {
     } else {
       const { buffer, byteOffset } = changeList
 
-      this.state = state
+      this.requestID = null
       this.node = node
+      this.state = state
       self.postMessage({ buffer, byteOffset }, [buffer])
+    }
+  }
+  schedule(state: model): void {
+    this.state = state
+    if (state.useTimeSlicing) {
+      if (this.requestID == null) {
+        this.requestID = vsync.requestAnimationFrame(() =>
+          this.transact(this.state)
+        )
+      }
+    } else {
+      if (this.requestID) {
+        vsync.cancelAnimationFrame(this.requestID)
+        this.requestID = null
+      }
+      this.transact(this.state)
     }
   }
   send<a>(payload: a, path: number[]): void {
     const action = Program.toMessage(this.node, path, payload)
     if (action) {
       const [state, fx] = this.update(action, this.state)
-      this.transact(state)
+      this.schedule(state)
     } else {
       console.error("Message receiver not found", path, payload)
     }

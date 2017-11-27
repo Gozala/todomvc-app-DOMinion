@@ -17,6 +17,7 @@ export const property = (name: string) => (
   value?: string | number | boolean | null
 ) => DOMinion.property(name, value)
 
+export const thunk = DOMinion.createThunk
 export const className = attribute("class")
 export const header = element("header")
 export const h1 = element("h1")

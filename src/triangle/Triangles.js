@@ -17,6 +17,7 @@ import {
   onClick,
   header,
   text,
+  thunk,
   section,
   label,
   ul,
@@ -137,7 +138,11 @@ export const view = (model: Model): Node<Message> => {
       ),
       div(
         [appStyle, styleApp(scale)],
-        [Triangle.view(0, 0, 1000, `${model.seconds}`).map(TagTriangle.new)]
+        [
+          thunk(Triangle.view, 0, 0, 1000, `${model.seconds}`).map(
+            TagTriangle.new
+          )
+        ]
       )
     ]
   )

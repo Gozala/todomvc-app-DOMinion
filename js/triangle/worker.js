@@ -2419,6 +2419,32 @@
     }
   }
 
+  class ThunkNode {
+    force() {
+      if (this.node == null) {
+        return (this.node = this.render(...this.args))
+      } else {
+        return this.node
+      }
+    }
+    constructor(render, args) {
+      _initialiseProps.call(this)
+
+      this.render = render
+      this.args = args
+    }
+    toDebugString() {
+      return this.force().toDebugString()
+    }
+    map(tag) {
+      return new TaggedNode(this, tag)
+    }
+  }
+
+  var _initialiseProps = function() {
+    this.nodeType = nodeType.THUNK_NODE
+  }
+
   const setAttribute = (name, value = "") =>
     new AttributeSetting(null, name, value == null ? null : value)
 
@@ -2442,6 +2468,8 @@
     return element
   }
 
+  const createThunk = (view, ...args) => new ThunkNode(view, args)
+
   const createHost = (settings = empty, children = empty) =>
     createElement("x-host", settings, children)
 
@@ -2450,6 +2478,8 @@
     createElement(name, settings, children)
   const attribute = name => (value = "") => setAttribute(name, value)
   const property = name => value => property$1(name, value)
+
+  const thunk = createThunk
 
   const h3 = element("h3")
   const input = element("input")
@@ -2673,7 +2703,7 @@
         ),
         div(
           [appStyle, styleApp(scale)],
-          [view$1(0, 0, 1000, `${model.seconds}`).map(TagTriangle.new)]
+          [thunk(view$1, 0, 0, 1000, `${model.seconds}`).map(TagTriangle.new)]
         )
       ]
     )
@@ -11563,6 +11593,154 @@
     requestPolyfilledAnimationFrame_1.requestPolyfilledAnimationFrame
   var requestPolyfilledAnimationFrame_6 = requestPolyfilledAnimationFrame_1.now
 
+  var preemptiveAnimationFrame = createCommonjsModule(function(
+    module,
+    exports
+  ) {
+    Object.defineProperty(exports, "__esModule", {
+      value: true
+    })
+    exports.forceAnimationFrame = exports.cancelAnimationFrame = exports.requestAnimationFrame = exports.now = undefined
+
+    var RAF = _interopRequireWildcard(requestPolyfilledAnimationFrame_1)
+
+    function _interopRequireWildcard(obj) {
+      if (obj && obj.__esModule) {
+        return obj
+      } else {
+        var newObj = {}
+        if (obj != null) {
+          for (var key in obj) {
+            if (Object.prototype.hasOwnProperty.call(obj, key))
+              newObj[key] = obj[key]
+          }
+        }
+        newObj.default = obj
+        return newObj
+      }
+    }
+
+    // Invariants:
+    // 1. In the NO_REQUEST state, there is never a scheduled animation frame.
+    // 2. In the PENDING_REQUEST and EXTRA_REQUEST states, there is always exactly
+    // one scheduled animation frame.
+    var NO_REQUEST = 0
+
+    var PENDING_REQUEST = 1
+    var EXTRA_REQUEST = 2
+
+    var requestID = null
+    var nextID = 0
+    var state = NO_REQUEST
+    var requests = []
+    var ids = []
+
+    var absent = new Error("absent")
+
+    var now = (exports.now = RAF.now)
+
+    var requestAnimationFrame = (exports.requestAnimationFrame = function requestAnimationFrame(
+      request
+    ) {
+      if (state === NO_REQUEST) {
+        requestID = RAF.requestAnimationFrame(performAnimationFrame)
+      }
+
+      var id = ++nextID
+      requests.push(request)
+      ids.push(id)
+      state = PENDING_REQUEST
+      return id
+    })
+
+    var cancelAnimationFrame = (exports.cancelAnimationFrame = function cancelAnimationFrame(
+      id
+    ) {
+      var index = ids.indexOf(id)
+      if (index >= 0) {
+        ids.splice(index, 1)
+        requests.splice(index, 1)
+      }
+    })
+
+    var forceAnimationFrame = (exports.forceAnimationFrame = function forceAnimationFrame() {
+      var time =
+        arguments.length > 0 && arguments[0] !== undefined
+          ? arguments[0]
+          : now()
+
+      switch (state) {
+        case NO_REQUEST:
+          break
+        default:
+          if (requestID != null) {
+            RAF.cancelAnimationFrame(requestID)
+            requestID = null
+          }
+          performAnimationFrame(time)
+      }
+    })
+
+    var performAnimationFrame = function performAnimationFrame(time) {
+      switch (state) {
+        case NO_REQUEST:
+          // This state should not be possible. How can there be no
+          // request, yet somehow we are actively fulfilling a
+          // request?
+          throw Error("Unexpected frame request")
+        case PENDING_REQUEST:
+          // At this point, we do not *know* that another frame is
+          // needed, but we make an extra frame request just in
+          // case. It's possible to drop a frame if frame is requested
+          // too late, so we just do it preemptively.
+          requestID = RAF.requestAnimationFrame(performAnimationFrame)
+          state = EXTRA_REQUEST
+          ids.splice(0)
+          dispatchAnimationFrame(requests.splice(0), 0, time)
+          break
+        case EXTRA_REQUEST:
+          // Turns out the extra request was not needed, so we will
+          // stop requesting. No reason to call it all the time if
+          // no one needs it.
+          state = NO_REQUEST
+          break
+      }
+    }
+
+    var dispatchAnimationFrame = function dispatchAnimationFrame(
+      requests,
+      index,
+      time
+    ) {
+      var exception = absent
+      var count = requests.length
+      try {
+        while (index < count) {
+          var request = requests[index]
+          index = index + 1
+          request(time)
+        }
+      } catch (error) {
+        exception = error
+      }
+
+      if (index < count) {
+        dispatchAnimationFrame(requests, index, time)
+      }
+
+      if (exception !== absent) {
+        throw exception
+      }
+    }
+  })
+
+  unwrapExports(preemptiveAnimationFrame)
+  var preemptiveAnimationFrame_1 = preemptiveAnimationFrame.forceAnimationFrame
+  var preemptiveAnimationFrame_2 = preemptiveAnimationFrame.cancelAnimationFrame
+  var preemptiveAnimationFrame_3 =
+    preemptiveAnimationFrame.requestAnimationFrame
+  var preemptiveAnimationFrame_4 = preemptiveAnimationFrame.now
+
   const ELEMENT_NODE = 1
   const TAGGED_ELEMENT_NODE = 22
   const THUNK_NODE = 23
@@ -11570,6 +11748,7 @@
   class Program {
     constructor({ view: view$$1, update: update$$1 }) {
       this.node = createHost()
+      this.requestID = null
 
       this.view = view$$1
       this.update = update$$1
@@ -11582,16 +11761,33 @@
       } else {
         const { buffer, byteOffset } = changeList
 
-        this.state = state
+        this.requestID = null
         this.node = node
+        this.state = state
         self.postMessage({ buffer, byteOffset }, [buffer])
+      }
+    }
+    schedule(state) {
+      this.state = state
+      if (state.useTimeSlicing) {
+        if (this.requestID == null) {
+          this.requestID = preemptiveAnimationFrame_3(() =>
+            this.transact(this.state)
+          )
+        }
+      } else {
+        if (this.requestID) {
+          preemptiveAnimationFrame_2(this.requestID)
+          this.requestID = null
+        }
+        this.transact(this.state)
       }
     }
     send(payload, path) {
       const action = Program.toMessage(this.node, path, payload)
       if (action) {
         const [state, fx] = this.update(action, this.state)
-        this.transact(state)
+        this.schedule(state)
       } else {
         console.error("Message receiver not found", path, payload)
       }

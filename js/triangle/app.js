@@ -17,9 +17,6 @@
   // Abstract out the table in case I want to edit the implementation to
   // arrays of arrays or something.
 
-  // Constructor for operations (which are a stream of edits). Uses
-  // variation of Levenshtein Distance.
-
   const empty$1 = Object.freeze([])
   const blank$1 = Object.freeze(Object.create(null))
 
@@ -71,10 +68,6 @@
     }
   }
 
-  /**
-   * Represents failer result and contains result `error`.
-   * @param x type of the `error` value for failed result.
-   */
   class Error$1 {
     /**
      * @param error Error value of this result.
@@ -845,14 +838,6 @@
       this.maybe = decoder
     }
   }
-
-  /**
-   * Parses given `input` string into a JSON value and then runs given
-   * `Decoder<a>` on it. Returns `Result` with `Result.Error<Decoder.ParseError>`
-   * if the string is not well-formed JSON or `Result.Error<Decoder.Error>` if
-   * the value can't be decoded with a given `Decoder<a>`. If operation is
-   * successfull returns `Result.Ok<a>`.
-   */
 
   /**
    * Runs given `Decoder<a>` on a given JSON value. Returns `Result` that either
@@ -1651,8 +1636,7 @@
   var flatbuffers = {}
 
   /**
-   * @type {number}
-   * @const
+   * @typedef {number}
    */
   flatbuffers.SIZEOF_SHORT = 2
 
@@ -2898,6 +2882,9 @@
   // Exports for Node.js and RequireJS
   ;({}.flatbuffers = flatbuffers)
 
+  /// @endcond
+  /// @}
+
   class DecoderError {
     constructor() {
       this.isError = true
@@ -2955,10 +2942,6 @@
   // Rewrite all overloads for string field methods.
   // Replace flatbuffers.Encoding with flatbuffers.EncodingValue
 
-  /**
-   * @enum
-   */
-  // export namespace JSON{
   const JSONVariant = {
     NONE: 0,
     Boolean: 1,
@@ -3705,10 +3688,6 @@
   // Replace all `/** @type {Value} */ (this.bb.readInt8(this.bb_pos + offset))` with `((this.bb.readInt8(this.bb_pos + offset):any):Value)`
   // Replace all `/** @type {JSON} */ (this.bb.readUint8(this.bb_pos + offset))` with `((this.bb.readUint8(this.bb_pos + offset):any):JSON)`
 
-  /**
-   * @enum
-   */
-  // // export namespace Decoder{
   const decoder = {
     NONE: 0,
     Error: 1,
