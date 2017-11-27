@@ -20,6 +20,7 @@ export const property = (name: string) => (
 export const className = attribute("class")
 export const header = element("header")
 export const h1 = element("h1")
+export const h3 = element("h3")
 export const input = element("input")
 export const placeholder = attribute("placeholder")
 export const autofocus = attribute("autofocus")
@@ -35,8 +36,10 @@ export const footer = element("footer")
 export const span = element("span")
 export const a = element("a")
 export const p = element("p")
+export const fieldset = element("fieldset")
 export const strong = element("strong")
 export const id = attribute("id")
+export const name = attribute("name")
 export const href = attribute("href")
 export const type = attribute("type")
 export const For = attribute("for")
@@ -50,6 +53,9 @@ export const onInput = on("input")
 export const onBlur = on("blur")
 export const onKeyDown = on("keydown")
 export const onDoubleClick = on("dblclick")
+export const onMouseEnter = on("mouseenter")
+export const onMouseLeave = on("mouseleave")
+export const onChange = on("change")
 
 export const visible = <a>(visible: boolean): DOMinion.Setting<a> =>
   DOMinion.style({ visibility: visible ? "visible" : "hidden" })
@@ -58,3 +64,7 @@ const EnterKey = Decoder.field("keyCode", Decoder.match(13))
 
 export const onEnter = <a>(decoder: Decoder.Decoder<a>): DOMinion.Setting<a> =>
   onKeyDown(Decoder.or(Decoder.and(EnterKey, decoder), Decoder.ok(null)))
+
+export const style = DOMinion.style
+
+export const px = (n: number): string => `${n}px`
