@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<!-- saved from url=(0114)file:///Applications/Servo.app/Contents/Resources/browserhtml/components/About/Newtab/Demos/transparent_rects.html -->
+<html>
+
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+    <style>
+        body {
+            background: #867e7b;
+            overflow: hidden;
+        }
+
+        section {
+            position: absolute;
+            background: white;
+            border: solid #404040 1px;
+            box-shadow: black 0 0 4px;
+            opacity: 0.5;
+        }
+
+        code {
+            position: relative;
+            font-size: 150%;
+            z-index: 10;
+        }
+    </style>
+</head>
+
+<body>
+    <code>FPS:<output id="fps"></code></code>
+    <script>
+        var WIDTH = window.innerWidth;
+        var HEIGHT = window.innerHeight;
+        var RECT_MIN_SIZE = 10;
+        var RECT_MAX_SIZE = 55;
+        var MIN_BORDER_RADIUS = 9;
+        var MAX_BORDER_RADIUS = 16;
+        var RECT_SPEED = 5;
+        var RECT_COUNT = 50;
+        function lerp(a, b, t) {
+            return a + (b - a) * t;
+        }
+        function positionRect(element) {
+            element.style.left = element.x + "px";
+            element.style.top = element.y + "px";
+        }
+        var nextX = 0, nextY = 0;
+        function placeRectAtEdge(element) {
+            var horizontal = Math.random() < 0.5;
+            if (horizontal) {
+                element.x = (Math.random() * WIDTH) | 0;
+                element.deltaX = (Math.random() - 0.5) * RECT_SPEED;
+                var top = Math.random() < 0.5;
+                if (top) {
+                    element.y = -element.size;
+                    element.deltaY = Math.random() * RECT_SPEED / 2;
+                } else {
+                    element.y = HEIGHT;
+                    element.deltaY = -Math.random() * RECT_SPEED / 2;
+                }
+            } else {
+                element.y = (Math.random() * WIDTH) | 0;
+                element.deltaY = (Math.random() - 0.5) * RECT_SPEED;
+                var left = Math.random() < 0.5;
+                if (left) {
+                    element.x = -element.size;
+                    element.deltaX = Math.random() * RECT_SPEED / 2;
+                } else {
+                    element.x = WIDTH;
+                    element.deltaX = -Math.random() * RECT_SPEED / 2;
+                }
+            }
+            /*element.x = nextX;
+            nextX += element.size;
+            element.y = nextY;
+        
+            if (nextX >= 800) {
+                nextX = 0;
+                nextY += RECT_MAX_SIZE;
+            }
+        
+            element.deltaX = 0;
+            element.deltaY = 1;*/
+        }
+        function rectIsOffScreen(element) {
+            var right = element.x + element.size, bottom = element.y + element.size;
+            return right <= 0 || bottom <= 0 || element.x >= WIDTH || element.y >= HEIGHT;
+        }
+        function createRect() {
+            var section = document.createElement('section');
+
+            section.size = lerp(RECT_MIN_SIZE, RECT_MAX_SIZE, Math.random());
+            //section.size = RECT_MAX_SIZE;
+            section.style.width = section.style.height = section.size + "px";
+            section.style.borderRadius = (Math.min(lerp(MIN_BORDER_RADIUS,
+                MAX_BORDER_RADIUS,
+                Math.random()), section.size / 3) | 0) + "px";
+            //section.style.borderRadius = lerp(MIN_BORDER_RADIUS, MAX_BORDER_RADIUS, 0.5) + "px";
+
+            placeRectAtEdge(section);
+            positionRect(section);
+            document.body.appendChild(section);
+            return section;
+        }
+
+        var rects = [];
+        for (var i = 0; i < RECT_COUNT; i++) {
+            rects.push(createRect());
+        }
+
+        //var frameLimit = 5;
+        var lastRefTime = performance.now()
+        var frameCount = 0;
+        var fps = document.getElementById('fps')
+        function update() {
+            for (var i = 0; i < rects.length; i++) {
+                var element = rects[i];
+                element.x += element.deltaX;
+                element.y += element.deltaY;
+                if (rectIsOffScreen(element))
+                    placeRectAtEdge(element);
+                positionRect(element);
+            }
+
+            frameCount++;
+            var now = performance.now();
+            if (now >= lastRefTime + 1000.0) {
+                fps.textContent = frameCount
+                lastRefTime = now;
+                frameCount = 0;
+            }
+
+            //frameLimit--;
+            //if (frameLimit > 0)
+            requestAnimationFrame(update);
+        }
+        requestAnimationFrame(update);
+    </script>
+    
+    <!--
+    <section style="height: 21.8838px; width: 21.8838px; border-radius: 7px; left: 1093.01px; top: 439.17px;"></section>
+    <section style="height: 21.6068px; width: 21.6068px; border-radius: 7px; left: 1092.31px; top: 159.77px;"></section>
+    <section style="height: 12.1075px; width: 12.1075px; border-radius: 3px; left: 696.391px; top: 21.779px;"></section>
+    <section style="height: 10.7058px; width: 10.7058px; border-radius: 3px; left: 242.47px; top: 294.892px;"></section>
+    <section style="height: 18.6187px; width: 18.6187px; border-radius: 3px; left: 90.9102px; top: 260.394px;"></section>
+    <section style="height: 19.6528px; width: 19.6528px; border-radius: 6px; left: 268.853px; top: 258.358px;"></section>
+    <section style="height: 15.2969px; width: 15.2969px; border-radius: 5px; left: 379.881px; top: 102.485px;"></section>
+    <section style="height: 20.7282px; width: 20.7282px; border-radius: 6px; left: 1070.25px; top: 398.361px;"></section>
+    <section style="height: 17.0953px; width: 17.0953px; border-radius: 5px; left: 1109.94px; top: 211.217px;"></section>
+    <section style="height: 14.2246px; width: 14.2246px; border-radius: 4px; left: 242.203px; top: 29.9281px;"></section>
+    <section style="height: 19.0499px; width: 19.0499px; border-radius: 6px; left: 906.964px; top: 331.117px;"></section>
+    <section style="height: 23.5845px; width: 23.5845px; border-radius: 6px; left: 1117.43px; top: 520.101px;"></section>
+    <section style="height: 23.5003px; width: 23.5003px; border-radius: 7px; left: 369.957px; top: 266.057px;"></section>
+    <section style="height: 10.4984px; width: 10.4984px; border-radius: 3px; left: 476.29px; top: 117.264px;"></section>
+    <section style="height: 17.1786px; width: 17.1786px; border-radius: 5px; left: 173.496px; top: -15.6167px;"></section>
+    <section style="height: 23.6418px; width: 23.6418px; border-radius: 4px; left: 223.402px; top: 402.09px;"></section>
+    <section style="height: 24.5845px; width: 24.5845px; border-radius: 5px; left: 666.203px; top: 417.838px;"></section>
+    <section style="height: 14.5245px; width: 14.5245px; border-radius: 4px; left: 43.5043px; top: 211.221px;"></section>
+    <section style="height: 12.7689px; width: 12.7689px; border-radius: 4px; left: 1114.73px; top: 249.94px;"></section>
+    <section style="height: 18.202px; width: 18.202px; border-radius: 6px; left: 1038.85px; top: 48.0545px;"></section>
+    <section style="height: 19.433px; width: 19.433px; border-radius: 6px; left: 16.504px; top: 198.383px;"></section>
+    <section style="height: 23.5541px; width: 23.5541px; border-radius: 6px; left: 296.384px; top: 111.395px;"></section>
+    <section style="height: 12.0759px; width: 12.0759px; border-radius: 3px; left: 104.237px; top: 344.636px;"></section>
+    <section style="height: 16.234px; width: 16.234px; border-radius: 5px; left: 150.339px; top: 160.516px;"></section>
+    <section style="height: 16.1367px; width: 16.1367px; border-radius: 5px; left: 1038.92px; top: 6.03415px;"></section>
+    <section style="height: 13.6754px; width: 13.6754px; border-radius: 4px; left: 306.701px; top: 385.293px;"></section>
+    <section style="height: 22.666px; width: 22.666px; border-radius: 7px; left: 779.185px; top: 190.329px;"></section>
+    <section style="height: 12.4393px; width: 12.4393px; border-radius: 4px; left: 16.7572px; top: 0.905235px;"></section>
+    <section style="height: 14.5035px; width: 14.5035px; border-radius: 4px; left: 90.7167px; top: 369.225px;"></section>
+    <section style="height: 15.6306px; width: 15.6306px; border-radius: 5px; left: -13.0381px; top: 119.108px;"></section>
+    <section style="height: 10.1107px; width: 10.1107px; border-radius: 3px; left: 1025.16px; top: 502.361px;"></section>
+    <section style="height: 14.6816px; width: 14.6816px; border-radius: 4px; left: 712.459px; top: 138.476px;"></section>
+    <section style="height: 18.0125px; width: 18.0125px; border-radius: 3px; left: 156.006px; top: 49.3892px;"></section>
+    <section style="height: 24.815px; width: 24.815px; border-radius: 8px; left: 308.642px; top: 167.179px;"></section>
+    <section style="height: 16.9797px; width: 16.9797px; border-radius: 5px; left: 529.855px; top: 452.719px;"></section>
+    <section style="height: 14.1352px; width: 14.1352px; border-radius: 4px; left: 426.737px; top: 24.8412px;"></section>
+    <section style="height: 16.5942px; width: 16.5942px; border-radius: 5px; left: 905.782px; top: 529.404px;"></section>
+    <section style="height: 19.8199px; width: 19.8199px; border-radius: 6px; left: 990.722px; top: 330.233px;"></section>
+    <section style="height: 12.8684px; width: 12.8684px; border-radius: 4px; left: 1092.72px; top: 455.636px;"></section>
+    <section style="height: 22.3049px; width: 22.3049px; border-radius: 7px; left: 348.802px; top: 116.745px;"></section>
+    <section style="height: 14.6801px; width: 14.6801px; border-radius: 3px; left: 952.167px; top: 411.939px;"></section>
+    <section style="height: 16.9233px; width: 16.9233px; border-radius: 5px; left: 515.325px; top: 360.449px;"></section>
+    <section style="height: 12.5384px; width: 12.5384px; border-radius: 4px; left: 851.951px; top: 412.711px;"></section>
+    <section style="height: 24.7061px; width: 24.7061px; border-radius: 5px; left: 297.57px; top: 167.985px;"></section>
+    <section style="height: 23.6601px; width: 23.6601px; border-radius: 7px; left: -12.0244px; top: 530.382px;"></section>
+    <section style="height: 18.0708px; width: 18.0708px; border-radius: 6px; left: 463.082px; top: 14.5461px;"></section>
+    <section style="height: 13.1156px; width: 13.1156px; border-radius: 4px; left: 744.832px; top: 293.092px;"></section>
+    <section style="height: 15.8125px; width: 15.8125px; border-radius: 5px; left: 620.132px; top: 205.686px;"></section>
+    <section style="height: 21.9053px; width: 21.9053px; border-radius: 7px; left: 633.283px; top: 83.6265px;"></section>
+    <section style="height: 14.7496px; width: 14.7496px; border-radius: 4px; left: 454.81px; top: 45.7539px;"></section>
+    <section style="height: 13.0894px; width: 13.0894px; border-radius: 4px; left: 987.894px; top: 32.7175px;"></section>
+    <section style="height: 11.7805px; width: 11.7805px; border-radius: 3px; left: 90.5551px; top: 136.324px;"></section>
+    <section style="height: 15.5877px; width: 15.5877px; border-radius: 5px; left: 410.984px; top: 294.594px;"></section>
+    <section style="height: 12.2723px; width: 12.2723px; border-radius: 4px; left: 102.258px; top: 420.201px;"></section>
+    <section style="height: 12.4198px; width: 12.4198px; border-radius: 4px; left: 1115.87px; top: 272.232px;"></section>
+    <section style="height: 23.2176px; width: 23.2176px; border-radius: 6px; left: 125.083px; top: 235.36px;"></section>
+    <section style="height: 16.9094px; width: 16.9094px; border-radius: 5px; left: 882.803px; top: 94.9832px;"></section>
+    <section style="height: 14.2087px; width: 14.2087px; border-radius: 4px; left: -5.85094px; top: 94.439px;"></section>
+    <section style="height: 16.414px; width: 16.414px; border-radius: 5px; left: 759.728px; top: 383.794px;"></section>
+    <section style="height: 22.4354px; width: 22.4354px; border-radius: 7px; left: 95.6918px; top: 40.6037px;"></section>
+    <section style="height: 12.7583px; width: 12.7583px; border-radius: 4px; left: 889.14px; top: 288.15px;"></section>
+    <section style="height: 15.7098px; width: 15.7098px; border-radius: 5px; left: 978.575px; top: 514.016px;"></section>
+    <section style="height: 16.1339px; width: 16.1339px; border-radius: 5px; left: 823.256px; top: 16.7574px;"></section>
+    <section style="height: 21.0384px; width: 21.0384px; border-radius: 7px; left: 260.73px; top: 352.968px;"></section>
+    <section style="height: 19.7287px; width: 19.7287px; border-radius: 6px; left: 501.095px; top: 413.454px;"></section>
+    <section style="height: 19.7255px; width: 19.7255px; border-radius: 3px; left: 676.132px; top: 332.773px;"></section>
+    <section style="height: 10.5101px; width: 10.5101px; border-radius: 3px; left: 712.536px; top: 436.839px;"></section>
+    <section style="height: 21.0306px; width: 21.0306px; border-radius: 7px; left: 665.242px; top: 511.909px;"></section>
+    <section style="height: 12.5095px; width: 12.5095px; border-radius: 4px; left: 328.692px; top: 242.589px;"></section>
+    <section style="height: 21.1268px; width: 21.1268px; border-radius: 4px; left: 679.226px; top: 262.805px;"></section>
+    <section style="height: 11.5987px; width: 11.5987px; border-radius: 3px; left: 1021.89px; top: 430.655px;"></section>
+    <section style="height: 20.8637px; width: 20.8637px; border-radius: 5px; left: 303.972px; top: 173.547px;"></section>
+    <section style="height: 22.7247px; width: 22.7247px; border-radius: 7px; left: 826.784px; top: 281.037px;"></section>
+    <section style="height: 10.237px; width: 10.237px; border-radius: 3px; left: 1086.25px; top: 509.428px;"></section>
+    <section style="height: 15.9208px; width: 15.9208px; border-radius: 5px; left: 960.886px; top: 291.514px;"></section>
+    <section style="height: 17.2507px; width: 17.2507px; border-radius: 5px; left: 978.821px; top: 253.606px;"></section>
+    <section style="height: 13.002px; width: 13.002px; border-radius: 4px; left: 208.619px; top: 12.5889px;"></section>
+    <section style="height: 15.6497px; width: 15.6497px; border-radius: 4px; left: 307.443px; top: 58.8157px;"></section>
+    <section style="height: 20.6492px; width: 20.6492px; border-radius: 6px; left: 457.445px; top: 260.082px;"></section>
+    <section style="height: 22.5993px; width: 22.5993px; border-radius: 7px; left: 578.687px; top: 128.391px;"></section>
+    <section style="height: 14.971px; width: 14.971px; border-radius: 4px; left: 768.594px; top: 425.207px;"></section>
+    <section style="height: 14.8082px; width: 14.8082px; border-radius: 3px; left: -5.92706px; top: 39.249px;"></section>
+    <section style="height: 18.0895px; width: 18.0895px; border-radius: 3px; left: 477.73px; top: 369.297px;"></section>
+    <section style="height: 10.6009px; width: 10.6009px; border-radius: 3px; left: 161.563px; top: -9.3828px;"></section>
+    <section style="height: 19.5775px; width: 19.5775px; border-radius: 6px; left: 776.602px; top: 345.418px;"></section>
+    <section style="height: 19.9158px; width: 19.9158px; border-radius: 6px; left: 43.9359px; top: 227.853px;"></section>
+    <section style="height: 22.9458px; width: 22.9458px; border-radius: 7px; left: 1096.55px; top: 346.527px;"></section>
+    <section style="height: 12.5603px; width: 12.5603px; border-radius: 4px; left: 996.224px; top: 298.762px;"></section>
+    <section style="height: 14.1332px; width: 14.1332px; border-radius: 4px; left: 441.935px; top: 176.34px;"></section>
+    <section style="height: 12.5598px; width: 12.5598px; border-radius: 4px; left: 153.221px; top: -4.83048px;"></section>
+    <section style="height: 21.414px; width: 21.414px; border-radius: 7px; left: 484.599px; top: 330.643px;"></section>
+    <section style="height: 24.1041px; width: 24.1041px; border-radius: 8px; left: 587.661px; top: 35.7521px;"></section>
+    <section style="height: 22.6286px; width: 22.6286px; border-radius: 5px; left: 80.7603px; top: 82.3554px;"></section>
+    <section style="height: 21.33px; width: 21.33px; border-radius: 5px; left: 1089.77px; top: 225.835px;"></section>
+    <section style="height: 14.4369px; width: 14.4369px; border-radius: 4px; left: 948.684px; top: 129.768px;"></section>
+    <section style="height: 12.8372px; width: 12.8372px; border-radius: 4px; left: 907.124px; top: 403.396px;"></section>
+    <section style="height: 10.9024px; width: 10.9024px; border-radius: 3px; left: 206.445px; top: 368.857px;"></section>
+    <section style="height: 17.9006px; width: 17.9006px; border-radius: 5px; left: 1014.85px; top: 202.861px;"></section>
+    <section style="height: 21.2773px; width: 21.2773px; border-radius: 7px; left: 580.01px; top: 228.759px;"></section>
+    <section style="height: 21.1926px; width: 21.1926px; border-radius: 3px; left: 262.73px; top: 362.815px;"></section>
+    <section style="height: 16.0888px; width: 16.0888px; border-radius: 5px; left: 735.261px; top: 76.3593px;"></section>
+    <section style="height: 14.5595px; width: 14.5595px; border-radius: 4px; left: 653.457px; top: 210.465px;"></section>
+    <section style="height: 22.4246px; width: 22.4246px; border-radius: 7px; left: 335.272px; top: 428.67px;"></section>
+    <section style="height: 24.0632px; width: 24.0632px; border-radius: 8px; left: 756.656px; top: 20.913px;"></section>
+    <section style="height: 16.8621px; width: 16.8621px; border-radius: 5px; left: 111.177px; top: 474.93px;"></section>
+    <section style="height: 24.1071px; width: 24.1071px; border-radius: 6px; left: 1071.68px; top: 480.304px;"></section>
+    <section style="height: 12.1942px; width: 12.1942px; border-radius: 4px; left: 680.578px; top: 305.443px;"></section>
+    <section style="height: 22.1195px; width: 22.1195px; border-radius: 3px; left: 197.137px; top: 427.715px;"></section>
+    <section style="height: 11.7464px; width: 11.7464px; border-radius: 3px; left: 411.573px; top: 73.8616px;"></section>
+    <section style="height: 23.7428px; width: 23.7428px; border-radius: 4px; left: 1119.03px; top: 142.165px;"></section>
+    <section style="height: 13.9249px; width: 13.9249px; border-radius: 4px; left: 614.711px; top: 144.668px;"></section>
+    <section style="height: 14.9717px; width: 14.9717px; border-radius: 4px; left: 749.267px; top: 502.436px;"></section>
+    <section style="height: 18.6059px; width: 18.6059px; border-radius: 6px; left: 1112.72px; top: 238.694px;"></section>
+    <section style="height: 10.9366px; width: 10.9366px; border-radius: 3px; left: 1070.27px; top: 472.306px;"></section>
+    <section style="height: 21.2438px; width: 21.2438px; border-radius: 5px; left: 1118.3px; top: 393.838px;"></section>
+    <section style="height: 15.9774px; width: 15.9774px; border-radius: 5px; left: 187.661px; top: 220.312px;"></section>
+    <section style="height: 16.1549px; width: 16.1549px; border-radius: 5px; left: 986.128px; top: 427.518px;"></section>
+    <section style="height: 14.5288px; width: 14.5288px; border-radius: 4px; left: 227.668px; top: 115.596px;"></section>
+    <section style="height: 16.1518px; width: 16.1518px; border-radius: 4px; left: 745.162px; top: 32.831px;"></section>
+    <section style="height: 24.5878px; width: 24.5878px; border-radius: 8px; left: 453.202px; top: 472.645px;"></section>
+    <section style="height: 10.0083px; width: 10.0083px; border-radius: 3px; left: 993.623px; top: 96.2866px;"></section>
+    <section style="height: 22.0634px; width: 22.0634px; border-radius: 7px; left: 953.893px; top: 26.1777px;"></section>
+    <section style="height: 18.4891px; width: 18.4891px; border-radius: 6px; left: 107.643px; top: 99.2816px;"></section>
+    <section style="height: 23.923px; width: 23.923px; border-radius: 7px; left: 916.161px; top: 152.691px;"></section>
+    <section style="height: 22.1006px; width: 22.1006px; border-radius: 7px; left: 579.793px; top: 209.55px;"></section>
+    <section style="height: 16.3781px; width: 16.3781px; border-radius: 5px; left: 971.61px; top: 55.8624px;"></section>
+    <section style="height: 11.6303px; width: 11.6303px; border-radius: 3px; left: 1085.55px; top: 75.4456px;"></section>
+    <section style="height: 12.5694px; width: 12.5694px; border-radius: 4px; left: 486.32px; top: 409.748px;"></section>
+    <section style="height: 22.4934px; width: 22.4934px; border-radius: 6px; left: 275.267px; top: 308.992px;"></section>
+    <section style="height: 24.1571px; width: 24.1571px; border-radius: 8px; left: 581.937px; top: 321.743px;"></section>
+    <section style="height: 13.6868px; width: 13.6868px; border-radius: 4px; left: 925.021px; top: 293.349px;"></section>
+    <section style="height: 15.2877px; width: 15.2877px; border-radius: 5px; left: 526.128px; top: 32.9823px;"></section>
+    <section style="height: 10.4704px; width: 10.4704px; border-radius: 3px; left: 279.743px; top: 106.301px;"></section>
+    <section style="height: 18.9648px; width: 18.9648px; border-radius: 6px; left: 354.276px; top: 501.58px;"></section>
+    <section style="height: 10.5641px; width: 10.5641px; border-radius: 3px; left: 203.381px; top: 488.042px;"></section>
+    <section style="height: 16.7122px; width: 16.7122px; border-radius: 5px; left: -16.2534px; top: 301.681px;"></section>
+    <section style="height: 17.3139px; width: 17.3139px; border-radius: 5px; left: 701.722px; top: 445.2px;"></section>
+    <section style="height: 13.3521px; width: 13.3521px; border-radius: 4px; left: 52.01px; top: 416.375px;"></section>
+    <section style="height: 22.3122px; width: 22.3122px; border-radius: 7px; left: 605.336px; top: 382.36px;"></section>
+    <section style="height: 11.0591px; width: 11.0591px; border-radius: 3px; left: 715.537px; top: 193.946px;"></section>
+    <section style="height: 11.9054px; width: 11.9054px; border-radius: 3px; left: 401.969px; top: 142.354px;"></section>
+    <section style="height: 14.3815px; width: 14.3815px; border-radius: 4px; left: 832.24px; top: 462.367px;"></section>
+    <section style="height: 12.4893px; width: 12.4893px; border-radius: 4px; left: 192.147px; top: 497.144px;"></section>
+    <section style="height: 17.6569px; width: 17.6569px; border-radius: 5px; left: 581.47px; top: 109.365px;"></section>
+    <section style="height: 10.3563px; width: 10.3563px; border-radius: 3px; left: 12.4328px; top: 472.818px;"></section>
+    <section style="height: 14.8784px; width: 14.8784px; border-radius: 4px; left: 180.705px; top: 319.614px;"></section>
+    <section style="height: 11.66px; width: 11.66px; border-radius: 3px; left: 311.655px; top: 17.2487px;"></section>
+    <section style="height: 14.1482px; width: 14.1482px; border-radius: 4px; left: 327.189px; top: 32.0713px;"></section>
+    <section style="height: 21.2994px; width: 21.2994px; border-radius: 7px; left: 614.381px; top: 10.5292px;"></section>
+    <section style="height: 17.9517px; width: 17.9517px; border-radius: 5px; left: 525.116px; top: 454.41px;"></section>
+    <section style="height: 15.6619px; width: 15.6619px; border-radius: 5px; left: 310.335px; top: 392.891px;"></section>
+    <section style="height: 10.7675px; width: 10.7675px; border-radius: 3px; left: 698.506px; top: 51.133px;"></section>
+    <section style="height: 18.1634px; width: 18.1634px; border-radius: 5px; left: 315.804px; top: 130.936px;"></section>
+    <section style="height: 17.7158px; width: 17.7158px; border-radius: 5px; left: 2.52615px; top: 224.74px;"></section>
+    <section style="height: 13.4546px; width: 13.4546px; border-radius: 4px; left: 549.076px; top: 272.009px;"></section>
+    <section style="height: 20.2191px; width: 20.2191px; border-radius: 3px; left: 809.007px; top: 297.917px;"></section>
+    <section style="height: 22.3395px; width: 22.3395px; border-radius: 4px; left: -19.398px; top: 478.882px;"></section>
+    <section style="height: 13.7386px; width: 13.7386px; border-radius: 3px; left: 470.923px; top: -13.318px;"></section>
+    <section style="height: 18.1315px; width: 18.1315px; border-radius: 6px; left: 76.4639px; top: 211.84px;"></section>
+    <section style="height: 14.3643px; width: 14.3643px; border-radius: 4px; left: 196.756px; top: 504.24px;"></section>
+    <section style="height: 10.9084px; width: 10.9084px; border-radius: 3px; left: 787.957px; top: 527.707px;"></section>
+    <section style="height: 24.2045px; width: 24.2045px; border-radius: 8px; left: 637.325px; top: 271.672px;"></section>
+    <section style="height: 10.0404px; width: 10.0404px; border-radius: 3px; left: 1112px; top: 21.6245px;"></section>
+    <section style="height: 23.1618px; width: 23.1618px; border-radius: 7px; left: 243.245px; top: -1.75167px;"></section>
+    <section style="height: 11.5117px; width: 11.5117px; border-radius: 3px; left: 227.896px; top: 158.391px;"></section>
+    <section style="height: 10.2712px; width: 10.2712px; border-radius: 3px; left: 367.691px; top: 292.146px;"></section>
+    <section style="height: 15.3395px; width: 15.3395px; border-radius: 5px; left: 545.768px; top: 214.59px;"></section>
+    <section style="height: 11.8395px; width: 11.8395px; border-radius: 3px; left: 60.06px; top: 492.84px;"></section>
+    <section style="height: 11.8466px; width: 11.8466px; border-radius: 3px; left: 866.205px; top: 222.463px;"></section>
+    <section style="height: 12.3453px; width: 12.3453px; border-radius: 4px; left: 154.825px; top: 57.7734px;"></section>
+    <section style="height: 11.4522px; width: 11.4522px; border-radius: 3px; left: 290.839px; top: 89.8764px;"></section>
+    <section style="height: 23.8198px; width: 23.8198px; border-radius: 6px; left: 574.915px; top: -4.11041px;"></section>
+    <section style="height: 23.3612px; width: 23.3612px; border-radius: 7px; left: 1035.18px; top: 113.3px;"></section>
+    <section style="height: 19.1143px; width: 19.1143px; border-radius: 6px; left: 516.757px; top: 300.441px;"></section>
+    <section style="height: 19.7336px; width: 19.7336px; border-radius: 6px; left: 829.164px; top: 204.59px;"></section>
+    <section style="height: 17.7413px; width: 17.7413px; border-radius: 5px; left: 70.3108px; top: 272.613px;"></section>
+    <section style="height: 14.8899px; width: 14.8899px; border-radius: 4px; left: 779.701px; top: -14.7322px;"></section>
+    <section style="height: 19.9179px; width: 19.9179px; border-radius: 3px; left: 233.156px; top: 83.233px;"></section>
+    <section style="height: 10.6476px; width: 10.6476px; border-radius: 3px; left: 554.896px; top: 169.495px;"></section>
+    <section style="height: 22.6944px; width: 22.6944px; border-radius: 7px; left: 852.785px; top: 512.146px;"></section>
+    <section style="height: 22.4233px; width: 22.4233px; border-radius: 7px; left: 1049.56px; top: 226.9px;"></section>
+    <section style="height: 20.2525px; width: 20.2525px; border-radius: 6px; left: 306.189px; top: -20.0493px;"></section>
+    <section style="height: 11.7207px; width: 11.7207px; border-radius: 3px; left: 958.722px; top: 321.192px;"></section>
+    <section style="height: 20.5248px; width: 20.5248px; border-radius: 6px; left: 16.7888px; top: 336.614px;"></section>
+    <section style="height: 22.6928px; width: 22.6928px; border-radius: 7px; left: 311.179px; top: 235.467px;"></section>
+    <section style="height: 10.4306px; width: 10.4306px; border-radius: 3px; left: 569.114px; top: 99.8621px;"></section>
+    <section style="height: 21.294px; width: 21.294px; border-radius: 7px; left: 302.513px; top: 495.856px;"></section>
+    <section style="height: 23.3743px; width: 23.3743px; border-radius: 7px; left: -23.3743px; top: 26px;"></section>
+    <section style="height: 22.9344px; width: 22.9344px; border-radius: 3px; left: 119.917px; top: 363.53px;"></section>
+    <section style="height: 15.0656px; width: 15.0656px; border-radius: 5px; left: 1061.02px; top: 397.027px;"></section>
+    <section style="height: 15.5249px; width: 15.5249px; border-radius: 5px; left: 1062.05px; top: 92.8911px;"></section>
+    <section style="height: 11.0538px; width: 11.0538px; border-radius: 3px; left: 651.98px; top: 321.042px;"></section>
+    <section style="height: 20.1648px; width: 20.1648px; border-radius: 6px; left: 160.31px; top: 4.53427px;"></section>
+    <section style="height: 20.0482px; width: 20.0482px; border-radius: 6px; left: 200.703px; top: 482.14px;"></section>
+    <section style="height: 19.7832px; width: 19.7832px; border-radius: 6px; left: 231.368px; top: 339.066px;"></section>
+    <section style="height: 24.6543px; width: 24.6543px; border-radius: 8px; left: -18.2567px; top: 494.307px;"></section>
+    <section style="height: 10.1926px; width: 10.1926px; border-radius: 3px; left: 722.467px; top: 42.8456px;"></section>
+    <section style="height: 20.0022px; width: 20.0022px; border-radius: 6px; left: 725.754px; top: 400.875px;"></section>
+    <section style="height: 10.6006px; width: 10.6006px; border-radius: 3px; left: 119.771px; top: 322.692px;"></section>
+    <section style="height: 21.8779px; width: 21.8779px; border-radius: 5px; left: 851.818px; top: 505.818px;"></section>
+    <section style="height: 22.2056px; width: 22.2056px; border-radius: 7px; left: 643.605px; top: 271.953px;"></section>
+    <section style="height: 24.9312px; width: 24.9312px; border-radius: 4px; left: 218.532px; top: 512.104px;"></section>
+    <section style="height: 24.0198px; width: 24.0198px; border-radius: 8px; left: 328.238px; top: 523.016px;"></section>
+    <section style="height: 23.3851px; width: 23.3851px; border-radius: 7px; left: -16.919px; top: 396.096px;"></section>
+    <section style="height: 13.2817px; width: 13.2817px; border-radius: 4px; left: 880.045px; top: 268.03px;"></section>
+    <section style="height: 10.1528px; width: 10.1528px; border-radius: 3px; left: 1088.45px; top: 41.7949px;"></section>
+    <section style="height: 20.0067px; width: 20.0067px; border-radius: 6px; left: 799.783px; top: 142.801px;"></section>
+    <section style="height: 24.8435px; width: 24.8435px; border-radius: 5px; left: 981.496px; top: 417.864px;"></section>
+    <section style="height: 15.3465px; width: 15.3465px; border-radius: 5px; left: 24.93px; top: 456.922px;"></section>
+    <section style="height: 22.5254px; width: 22.5254px; border-radius: 3px; left: 1092.86px; top: 410.147px;"></section>
+    <section style="height: 20.9005px; width: 20.9005px; border-radius: 6px; left: 755.61px; top: 359.868px;"></section>
+    <section style="height: 14.5965px; width: 14.5965px; border-radius: 4px; left: 817.576px; top: 459.475px;"></section>
+    <section style="height: 23.8605px; width: 23.8605px; border-radius: 4px; left: 227.044px; top: 175.552px;"></section>
+    <section style="height: 16.7629px; width: 16.7629px; border-radius: 5px; left: 1083.81px; top: 448.426px;"></section>
+    <section style="height: 18.4229px; width: 18.4229px; border-radius: 6px; left: 959.058px; top: -15.0725px;"></section>
+    <section style="height: 22.7522px; width: 22.7522px; border-radius: 7px; left: 453.624px; top: 105.373px;"></section>
+    <section style="height: 16.1347px; width: 16.1347px; border-radius: 5px; left: 772.231px; top: 488.527px;"></section>
+    <section style="height: 24.983px; width: 24.983px; border-radius: 8px; left: 234.702px; top: 229.315px;"></section>
+    <section style="height: 24.9733px; width: 24.9733px; border-radius: 8px; left: 287.29px; top: 529.124px;"></section>
+    <section style="height: 14.3478px; width: 14.3478px; border-radius: 4px; left: 705.672px; top: 499.286px;"></section>
+    <section style="height: 21.8298px; width: 21.8298px; border-radius: 7px; left: 425.145px; top: 249.778px;"></section>
+    <section style="height: 24.9872px; width: 24.9872px; border-radius: 8px; left: 756.479px; top: 64.1324px;"></section>
+    <section style="height: 21.8828px; width: 21.8828px; border-radius: 5px; left: 338.563px; top: 196.42px;"></section>
+    <section style="height: 20.1209px; width: 20.1209px; border-radius: 6px; left: 148.926px; top: -10.7865px;"></section>
+    <section style="height: 22.3058px; width: 22.3058px; border-radius: 7px; left: 460.843px; top: 225.283px;"></section>
+    <section style="height: 12.5096px; width: 12.5096px; border-radius: 4px; left: 122.355px; top: 169.34px;"></section>
+    <section style="height: 20.0016px; width: 20.0016px; border-radius: 6px; left: 1118.12px; top: 381.082px;"></section>
+    <section style="height: 15.0182px; width: 15.0182px; border-radius: 5px; left: 1.04258px; top: 103.069px;"></section>
+    <section style="height: 13.2267px; width: 13.2267px; border-radius: 4px; left: 3.96296px; top: 529.57px;"></section>
+    <section style="height: 24.6975px; width: 24.6975px; border-radius: 7px; left: 464.116px; top: 449.419px;"></section>
+    <section style="height: 15.4249px; width: 15.4249px; border-radius: 5px; left: 6.62034px; top: 38.6748px;"></section>
+    <section style="height: 14.4889px; width: 14.4889px; border-radius: 4px; left: 697.303px; top: 359.67px;"></section>
+    <section style="height: 15.7064px; width: 15.7064px; border-radius: 3px; left: 781.144px; top: 10.1616px;"></section>
+    <section style="height: 18.6811px; width: 18.6811px; border-radius: 6px; left: 345.703px; top: 371.415px;"></section>
+    <section style="height: 22.9901px; width: 22.9901px; border-radius: 7px; left: 604.563px; top: 348.427px;"></section>
+    <section style="height: 14.6473px; width: 14.6473px; border-radius: 4px; left: 559.862px; top: 134.797px;"></section>
+    <section style="height: 20.6949px; width: 20.6949px; border-radius: 3px; left: 961.12px; top: 345.715px;"></section>
+    <section style="height: 18.3579px; width: 18.3579px; border-radius: 5px; left: 36.1267px; top: 502.794px;"></section>
+    <section style="height: 12.3083px; width: 12.3083px; border-radius: 4px; left: 16.4px; top: 402.06px;"></section>
+    <section style="height: 22.1542px; width: 22.1542px; border-radius: 7px; left: 777.325px; top: 179.704px;"></section>
+    <section style="height: 21.0785px; width: 21.0785px; border-radius: 7px; left: 77.1288px; top: 511.504px;"></section>
+    <section style="height: 15.2521px; width: 15.2521px; border-radius: 5px; left: 562.552px; top: 7.37844px;"></section>
+    <section style="height: 21.1918px; width: 21.1918px; border-radius: 4px; left: 205.677px; top: 448.114px;"></section>
+    <section style="height: 24.3459px; width: 24.3459px; border-radius: 4px; left: 980.047px; top: 50.5099px;"></section>
+    <section style="height: 11.738px; width: 11.738px; border-radius: 3px; left: 780.499px; top: 306.492px;"></section>
+    <section style="height: 14.8616px; width: 14.8616px; border-radius: 4px; left: 278.898px; top: 336.627px;"></section>
+    <section style="height: 16.2435px; width: 16.2435px; border-radius: 3px; left: 741.838px; top: 342.497px;"></section>
+    <section style="height: 11.5836px; width: 11.5836px; border-radius: 3px; left: 751.61px; top: 322.043px;"></section>
+    <section style="height: 15.2446px; width: 15.2446px; border-radius: 5px; left: 942.608px; top: 118.237px;"></section>
+    <section style="height: 20.52px; width: 20.52px; border-radius: 6px; left: 859.871px; top: 325.238px;"></section>
+    <section style="height: 14.742px; width: 14.742px; border-radius: 4px; left: 223.797px; top: 276.186px;"></section>
+    <section style="height: 19.387px; width: 19.387px; border-radius: 5px; left: 557.729px; top: 126.056px;"></section>
+    <section style="height: 19.2493px; width: 19.2493px; border-radius: 6px; left: 952.082px; top: 136.86px;"></section>
+    <section style="height: 22.3126px; width: 22.3126px; border-radius: 7px; left: 87.0102px; top: 43.8017px;"></section>
+    <section style="height: 16.2645px; width: 16.2645px; border-radius: 5px; left: 925.204px; top: 333.451px;"></section>
+    <section style="height: 18.5302px; width: 18.5302px; border-radius: 6px; left: 196.61px; top: 324.137px;"></section>
+    <section style="height: 21.5164px; width: 21.5164px; border-radius: 7px; left: 316.61px; top: 438.048px;"></section>
+    <section style="height: 15.2902px; width: 15.2902px; border-radius: 5px; left: 236.483px; top: 411.391px;"></section>
+    <section style="height: 11.3631px; width: 11.3631px; border-radius: 3px; left: 284.236px; top: 361.112px;"></section>
+    <section style="height: 14.5808px; width: 14.5808px; border-radius: 4px; left: 542.564px; top: 113.335px;"></section>
+    <section style="height: 18.753px; width: 18.753px; border-radius: 6px; left: 917.343px; top: 430.438px;"></section>
+    <section style="height: 16.969px; width: 16.969px; border-radius: 5px; left: 467.362px; top: 476.862px;"></section>
+    <section style="height: 20.3718px; width: 20.3718px; border-radius: 6px; left: 459.524px; top: 472.729px;"></section>
+    <section style="height: 14.5548px; width: 14.5548px; border-radius: 4px; left: 368.416px; top: 353.583px;"></section>
+    <section style="height: 11.8655px; width: 11.8655px; border-radius: 3px; left: 539.859px; top: 495.05px;"></section>
+    <section style="height: 21.4528px; width: 21.4528px; border-radius: 5px; left: 110.744px; top: 150.302px;"></section>
+    <section style="height: 21.5799px; width: 21.5799px; border-radius: 7px; left: 881.456px; top: 131.912px;"></section>
+    <section style="height: 21.5324px; width: 21.5324px; border-radius: 7px; left: 573.304px; top: 435.389px;"></section>
+    <section style="height: 11.5327px; width: 11.5327px; border-radius: 3px; left: 1118.1px; top: 136.685px;"></section>
+    <section style="height: 14.8674px; width: 14.8674px; border-radius: 4px; left: 1014.93px; top: 192.778px;"></section>
+    <section style="height: 24.69px; width: 24.69px; border-radius: 8px; left: 300.889px; top: 243.888px;"></section>
+    <section style="height: 15.9146px; width: 15.9146px; border-radius: 5px; left: 137.339px; top: -9.54314px;"></section>
+    <section style="height: 16.815px; width: 16.815px; border-radius: 5px; left: 463.652px; top: 511.38px;"></section>
+    <section style="height: 14.969px; width: 14.969px; border-radius: 4px; left: 845.677px; top: 432.585px;"></section>
+    <section style="height: 22.2428px; width: 22.2428px; border-radius: 4px; left: 208.824px; top: 471.617px;"></section>
+    <section style="height: 11.3751px; width: 11.3751px; border-radius: 3px; left: 720.804px; top: 415.151px;"></section>
+    <section style="height: 21.8281px; width: 21.8281px; border-radius: 6px; left: 758.44px; top: 377.471px;"></section>
+    <section style="height: 11.2164px; width: 11.2164px; border-radius: 3px; left: 762.872px; top: 176.098px;"></section>
+    <section style="height: 12.8852px; width: 12.8852px; border-radius: 4px; left: 199.266px; top: 462.037px;"></section>
+    <section style="height: 10.286px; width: 10.286px; border-radius: 3px; left: 1116.33px; top: 268.452px;"></section>
+    <section style="height: 11.0444px; width: 11.0444px; border-radius: 3px; left: 436.744px; top: 117.693px;"></section>
+    <section style="height: 10.9803px; width: 10.9803px; border-radius: 3px; left: 926.359px; top: 233.728px;"></section>
+    <section style="height: 19.2554px; width: 19.2554px; border-radius: 6px; left: 748.571px; top: 201.062px;"></section>
+    <section style="height: 20.0269px; width: 20.0269px; border-radius: 4px; left: 87.2243px; top: 529.838px;"></section>
+    <section style="height: 11.5598px; width: 11.5598px; border-radius: 3px; left: 456.452px; top: 95.0514px;"></section>
+    <section style="height: 18.1318px; width: 18.1318px; border-radius: 5px; left: 761.708px; top: 518.198px;"></section>
+    <section style="height: 16.0924px; width: 16.0924px; border-radius: 5px; left: 1059.69px; top: 312.165px;"></section>
+    <section style="height: 12.3393px; width: 12.3393px; border-radius: 4px; left: 78.7513px; top: 292.925px;"></section>
+    <section style="height: 11.5443px; width: 11.5443px; border-radius: 3px; left: 1043.75px; top: 429.739px;"></section>
+    <section style="height: 11.2432px; width: 11.2432px; border-radius: 3px; left: 125.297px; top: 351.046px;"></section>
+    <section style="height: 23.31px; width: 23.31px; border-radius: 5px; left: 918.798px; top: 135.974px;"></section>
+    <section style="height: 15.1255px; width: 15.1255px; border-radius: 4px; left: 940.564px; top: 517.762px;"></section>
+    <section style="height: 15.813px; width: 15.813px; border-radius: 5px; left: 566.889px; top: -2.01356px;"></section>
+    <section style="height: 19.3013px; width: 19.3013px; border-radius: 6px; left: 820.68px; top: 441.931px;"></section>
+    <section style="height: 10.0394px; width: 10.0394px; border-radius: 3px; left: 136.903px; top: 107.339px;"></section>
+    <section style="height: 10.8232px; width: 10.8232px; border-radius: 3px; left: 1074.67px; top: 435.412px;"></section>
+    <section style="height: 20.7921px; width: 20.7921px; border-radius: 6px; left: 357.446px; top: 300.197px;"></section>
+    <section style="height: 21.8332px; width: 21.8332px; border-radius: 7px; left: 521.501px; top: 459.985px;"></section>
+    <section style="height: 24.5668px; width: 24.5668px; border-radius: 5px; left: 855.071px; top: 83.3426px;"></section>
+    <section style="height: 16.9842px; width: 16.9842px; border-radius: 5px; left: 1036.96px; top: 197.701px;"></section>
+    <section style="height: 15.1154px; width: 15.1154px; border-radius: 5px; left: 967.047px; top: 197.004px;"></section>
+    <section style="height: 24.3494px; width: 24.3494px; border-radius: 7px; left: 805.365px; top: 337.162px;"></section>
+    <section style="height: 17.4461px; width: 17.4461px; border-radius: 5px; left: 263.948px; top: 172.07px;"></section>
+    <section style="height: 18.5314px; width: 18.5314px; border-radius: 5px; left: -13.8211px; top: 345.68px;"></section>
+    <section style="height: 23.4599px; width: 23.4599px; border-radius: 7px; left: 381.047px; top: 449.29px;"></section>
+    <section style="height: 10.9002px; width: 10.9002px; border-radius: 3px; left: 1030.59px; top: 327.415px;"></section>
+    <section style="height: 16.4173px; width: 16.4173px; border-radius: 5px; left: 934.262px; top: 342.945px;"></section>
+    <section style="height: 16.4473px; width: 16.4473px; border-radius: 5px; left: 0.270935px; top: 204.023px;"></section>
+    <section style="height: 12.6894px; width: 12.6894px; border-radius: 4px; left: 395.539px; top: 89.2813px;"></section>
+    <section style="height: 12.4285px; width: 12.4285px; border-radius: 4px; left: 150.911px; top: 319.947px;"></section>
+    <section style="height: 11.4636px; width: 11.4636px; border-radius: 3px; left: 1117.77px; top: 367.159px;"></section>
+    <section style="height: 17.1488px; width: 17.1488px; border-radius: 5px; left: 918.599px; top: 424.27px;"></section>
+    <section style="height: 23.0518px; width: 23.0518px; border-radius: 3px; left: 295.882px; top: 529.698px;"></section>
+    <section style="height: 16.063px; width: 16.063px; border-radius: 5px; left: 62.7571px; top: 250.766px;"></section>
+    <section style="height: 15.861px; width: 15.861px; border-radius: 5px; left: 345.98px; top: 307.501px;"></section>
+    <section style="height: 17.2571px; width: 17.2571px; border-radius: 5px; left: 924.578px; top: -11.719px;"></section>
+    <section style="height: 14.9634px; width: 14.9634px; border-radius: 4px; left: 895.979px; top: 470.035px;"></section>
+    <section style="height: 17.7282px; width: 17.7282px; border-radius: 5px; left: 732.391px; top: 204.562px;"></section>
+    <section style="height: 18.56px; width: 18.56px; border-radius: 6px; left: 953.806px; top: 152.705px;"></section>
+    <section style="height: 11.1048px; width: 11.1048px; border-radius: 3px; left: 1074.72px; top: 280.386px;"></section>
+    <section style="height: 24.7916px; width: 24.7916px; border-radius: 8px; left: 1085.08px; top: 393.252px;"></section>
+    <section style="height: 13.1862px; width: 13.1862px; border-radius: 4px; left: 358.108px; top: 209.383px;"></section>
+    <section style="height: 17.8569px; width: 17.8569px; border-radius: 5px; left: 254.098px; top: 369.371px;"></section>
+    <section style="height: 16.421px; width: 16.421px; border-radius: 5px; left: 747.063px; top: 74.8176px;"></section>
+    <section style="height: 21.2762px; width: 21.2762px; border-radius: 7px; left: 790.998px; top: 207.777px;"></section>
+    <section style="height: 24.5512px; width: 24.5512px; border-radius: 8px; left: 1072.71px; top: 464.517px;"></section>
+    <section style="height: 20.9768px; width: 20.9768px; border-radius: 6px; left: 716.428px; top: 366.447px;"></section>
+    <section style="height: 23.7776px; width: 23.7776px; border-radius: 6px; left: 43.292px; top: 307.887px;"></section>
+    <section style="height: 11.1133px; width: 11.1133px; border-radius: 3px; left: 925.811px; top: 145.299px;"></section>
+    <section style="height: 24.7726px; width: 24.7726px; border-radius: 8px; left: 278.731px; top: 275.228px;"></section>
+    <section style="height: 17.4418px; width: 17.4418px; border-radius: 4px; left: 433.094px; top: 286.081px;"></section>
+    <section style="height: 12.9088px; width: 12.9088px; border-radius: 4px; left: 361.034px; top: 363.556px;"></section>
+    <section style="height: 16.1562px; width: 16.1562px; border-radius: 5px; left: 1104.01px; top: 382.469px;"></section>
+    <section style="height: 19.1609px; width: 19.1609px; border-radius: 6px; left: 513.161px; top: 85.4284px;"></section>
+    <section style="height: 19.3216px; width: 19.3216px; border-radius: 6px; left: 306.46px; top: 219.167px;"></section>
+    <section style="height: 11.2023px; width: 11.2023px; border-radius: 3px; left: 769.018px; top: -6.58424px;"></section>
+    <section style="height: 18.9999px; width: 18.9999px; border-radius: 6px; left: 822.206px; top: 13.5876px;"></section>
+    <section style="height: 20.8605px; width: 20.8605px; border-radius: 6px; left: 498.269px; top: 100.24px;"></section>
+    <section style="height: 14.7536px; width: 14.7536px; border-radius: 4px; left: 164.531px; top: 481.475px;"></section>
+    <section style="height: 14.1843px; width: 14.1843px; border-radius: 4px; left: 371.429px; top: 522.82px;"></section>
+    <section style="height: 22.8606px; width: 22.8606px; border-radius: 7px; left: 779.957px; top: 412.746px;"></section>
+    <section style="height: 24.1406px; width: 24.1406px; border-radius: 8px; left: 208.645px; top: 176.755px;"></section>
+    <section style="height: 22.1327px; width: 22.1327px; border-radius: 7px; left: 837.356px; top: 30.7322px;"></section>
+    <section style="height: 21.6518px; width: 21.6518px; border-radius: 5px; left: 760.626px; top: 100.559px;"></section>
+    <section style="height: 20.1372px; width: 20.1372px; border-radius: 3px; left: 1072.26px; top: 168.848px;"></section>
+    <section style="height: 15.7527px; width: 15.7527px; border-radius: 5px; left: 70.471px; top: 180.584px;"></section>
+    <section style="height: 18.8165px; width: 18.8165px; border-radius: 6px; left: 327.017px; top: 509.895px;"></section>
+    <section style="height: 21.5179px; width: 21.5179px; border-radius: 6px; left: 850.703px; top: 528.931px;"></section>
+    <section style="height: 19.4874px; width: 19.4874px; border-radius: 6px; left: 823.244px; top: 450.967px;"></section>
+    <section style="height: 22.0763px; width: 22.0763px; border-radius: 7px; left: 639.975px; top: 202.858px;"></section>
+    <section style="height: 12.1253px; width: 12.1253px; border-radius: 4px; left: 466.31px; top: -6.03706px;"></section>
+    <section style="height: 12.2849px; width: 12.2849px; border-radius: 4px; left: 341.133px; top: 337.245px;"></section>
+    <section style="height: 22.6143px; width: 22.6143px; border-radius: 7px; left: 155.047px; top: 212.673px;"></section>
+    <section style="height: 10.403px; width: 10.403px; border-radius: 3px; left: 104.884px; top: 240.67px;"></section>
+    <section style="height: 13.938px; width: 13.938px; border-radius: 4px; left: 775.309px; top: 204.949px;"></section>
+    <section style="height: 22.0529px; width: 22.0529px; border-radius: 7px; left: 23.85px; top: 176.285px;"></section>
+    <section style="height: 23.3347px; width: 23.3347px; border-radius: 7px; left: 337.875px; top: 136.519px;"></section>
+    <section style="height: 20.8442px; width: 20.8442px; border-radius: 3px; left: 286.826px; top: 56.4151px;"></section>
+    <section style="height: 11.8761px; width: 11.8761px; border-radius: 3px; left: 929.862px; top: 285.799px;"></section>
+    <section style="height: 17.3959px; width: 17.3959px; border-radius: 4px; left: 443.53px; top: 278.491px;"></section>
+    <section style="height: 19.9161px; width: 19.9161px; border-radius: 6px; left: 1079.48px; top: 416.031px;"></section>
+    <section style="height: 19.1701px; width: 19.1701px; border-radius: 6px; left: 193.697px; top: 39.9062px;"></section>
+    <section style="height: 15.0171px; width: 15.0171px; border-radius: 3px; left: -4.57716px; top: 342.18px;"></section>
+    <section style="height: 22.8152px; width: 22.8152px; border-radius: 7px; left: 36.4611px; top: -13.4449px;"></section>
+    <section style="height: 22.6323px; width: 22.6323px; border-radius: 7px; left: 650.639px; top: 151.676px;"></section>
+    <section style="height: 19.0266px; width: 19.0266px; border-radius: 4px; left: 1109.27px; top: 367.097px;"></section>
+    <section style="height: 18.4164px; width: 18.4164px; border-radius: 3px; left: 1038.37px; top: 438.465px;"></section>
+    <section style="height: 21.9991px; width: 21.9991px; border-radius: 4px; left: 804.021px; top: 305.085px;"></section>
+    <section style="height: 17.3627px; width: 17.3627px; border-radius: 5px; left: 770.736px; top: 359.408px;"></section>
+    <section style="height: 22.8404px; width: 22.8404px; border-radius: 7px; left: 1042.7px; top: 508.866px;"></section>
+    <section style="height: 10.908px; width: 10.908px; border-radius: 3px; left: 919.752px; top: 154.501px;"></section>
+    <section style="height: 18.1289px; width: 18.1289px; border-radius: 6px; left: 14.2201px; top: 405.471px;"></section>
+    <section style="height: 19.1008px; width: 19.1008px; border-radius: 6px; left: 937.733px; top: 310.13px;"></section>
+    <section style="height: 13.983px; width: 13.983px; border-radius: 4px; left: 301.397px; top: 303.21px;"></section>
+    <section style="height: 17.5919px; width: 17.5919px; border-radius: 5px; left: 195.936px; top: 136.607px;"></section>
+    <section style="height: 18.476px; width: 18.476px; border-radius: 6px; left: 873.875px; top: 494.818px;"></section>
+    <section style="height: 14.8737px; width: 14.8737px; border-radius: 4px; left: 836.317px; top: 257.356px;"></section>
+    <section style="height: 16.483px; width: 16.483px; border-radius: 5px; left: 585.195px; top: 282.213px;"></section>
+    <section style="height: 10.2269px; width: 10.2269px; border-radius: 3px; left: 138.354px; top: 376.247px;"></section>
+    <section style="height: 16.5386px; width: 16.5386px; border-radius: 5px; left: 1119.47px; top: 118.269px;"></section>
+    <section style="height: 17.2131px; width: 17.2131px; border-radius: 3px; left: 128.317px; top: 502.58px;"></section>
+    <section style="height: 13.8846px; width: 13.8846px; border-radius: 4px; left: 855.727px; top: 230.797px;"></section>
+    <section style="height: 17.429px; width: 17.429px; border-radius: 5px; left: 711.371px; top: 463.371px;"></section>
+    <section style="height: 11.2182px; width: 11.2182px; border-radius: 3px; left: 987.262px; top: 150.675px;"></section>
+    <section style="height: 10.7295px; width: 10.7295px; border-radius: 3px; left: 280.756px; top: 400.725px;"></section>
+    <section style="height: 22.8963px; width: 22.8963px; border-radius: 3px; left: 407.891px; top: 93.1616px;"></section>
+    <section style="height: 23.8608px; width: 23.8608px; border-radius: 7px; left: 183.258px; top: 488.972px;"></section>
+    <section style="height: 21.5143px; width: 21.5143px; border-radius: 7px; left: 1095.88px; top: 405.434px;"></section>
+    <section style="height: 23.9299px; width: 23.9299px; border-radius: 7px; left: 378.358px; top: 2.40534px;"></section>
+    <section style="height: 16.5714px; width: 16.5714px; border-radius: 4px; left: 620.315px; top: 39.0911px;"></section>
+    <section style="height: 23.3748px; width: 23.3748px; border-radius: 7px; left: 1096.1px; top: 66.3375px;"></section>
+    <section style="height: 15.6551px; width: 15.6551px; border-radius: 5px; left: 487.373px; top: 234.321px;"></section>
+    <section style="height: 22.3146px; width: 22.3146px; border-radius: 7px; left: 727.607px; top: 10.1412px;"></section>
+    <section style="height: 22.6749px; width: 22.6749px; border-radius: 7px; left: 891.645px; top: 258.246px;"></section>
+    <section style="height: 22.994px; width: 22.994px; border-radius: 7px; left: 391.304px; top: 458.751px;"></section>
+    <section style="height: 10.303px; width: 10.303px; border-radius: 3px; left: 855.774px; top: 443.507px;"></section>
+    <section style="height: 20.0788px; width: 20.0788px; border-radius: 6px; left: 1050.83px; top: 302.045px;"></section>
+    <section style="height: 22.3867px; width: 22.3867px; border-radius: 7px; left: 1044.15px; top: 110.095px;"></section>
+    <section style="height: 22.64px; width: 22.64px; border-radius: 3px; left: 501.132px; top: 117.728px;"></section>
+    <section style="height: 11.3874px; width: 11.3874px; border-radius: 3px; left: 4.29695px; top: 489.254px;"></section>
+    <section style="height: 14.8336px; width: 14.8336px; border-radius: 4px; left: 366.07px; top: 455.883px;"></section>
+    <section style="height: 14.9996px; width: 14.9996px; border-radius: 4px; left: 929.742px; top: 17.1817px;"></section>
+    <section style="height: 17.5591px; width: 17.5591px; border-radius: 5px; left: 810.953px; top: 182.787px;"></section>
+    <section style="height: 22.2862px; width: 22.2862px; border-radius: 7px; left: -8.44248px; top: 366.76px;"></section>
+    <section style="height: 10.1212px; width: 10.1212px; border-radius: 3px; left: 537.569px; top: 321.469px;"></section>
+    <section style="height: 19.8914px; width: 19.8914px; border-radius: 6px; left: 779.823px; top: 27.6338px;"></section>
+    <section style="height: 23.2073px; width: 23.2073px; border-radius: 4px; left: 268.71px; top: 23.9897px;"></section>
+    <section style="height: 18.5313px; width: 18.5313px; border-radius: 6px; left: 42.9333px; top: 278.112px;"></section>
+    <section style="height: 19.9982px; width: 19.9982px; border-radius: 6px; left: 389.863px; top: -7.04568px;"></section>
+    <section style="height: 19.7744px; width: 19.7744px; border-radius: 5px; left: 1071.08px; top: 194.14px;"></section>
+    <section style="height: 21.7392px; width: 21.7392px; border-radius: 5px; left: 777.476px; top: 476.463px;"></section>
+    <section style="height: 21.1762px; width: 21.1762px; border-radius: 5px; left: 105.33px; top: 409.277px;"></section>
+    <section style="height: 15.3593px; width: 15.3593px; border-radius: 5px; left: 532.687px; top: 523.657px;"></section>
+    <section style="height: 21.5206px; width: 21.5206px; border-radius: 7px; left: 863.003px; top: 529.989px;"></section>
+    <section style="height: 17.3441px; width: 17.3441px; border-radius: 4px; left: 107.474px; top: 496.143px;"></section>
+    <section style="height: 12.6925px; width: 12.6925px; border-radius: 4px; left: 1097.63px; top: 333.44px;"></section>
+    <section style="height: 16.322px; width: 16.322px; border-radius: 4px; left: 78.2638px; top: 3.1481px;"></section>
+    <section style="height: 19.5614px; width: 19.5614px; border-radius: 4px; left: 198.242px; top: 387.172px;"></section>
+    <section style="height: 24.4126px; width: 24.4126px; border-radius: 8px; left: 162.115px; top: 174.561px;"></section>
+    <section style="height: 10.3853px; width: 10.3853px; border-radius: 3px; left: 645.096px; top: 275.856px;"></section>
+    <section style="height: 22.221px; width: 22.221px; border-radius: 6px; left: 446.894px; top: 54.7971px;"></section>
+    <section style="height: 21.9799px; width: 21.9799px; border-radius: 7px; left: 999.923px; top: 338.184px;"></section>
+    <section style="height: 11.5154px; width: 11.5154px; border-radius: 3px; left: 375.516px; top: 287.896px;"></section>
+    <section style="height: 21.1957px; width: 21.1957px; border-radius: 7px; left: 225.366px; top: 334.494px;"></section>
+    <section style="height: 17.8409px; width: 17.8409px; border-radius: 5px; left: 993.925px; top: 154.4px;"></section>
+    <section style="height: 20.4467px; width: 20.4467px; border-radius: 3px; left: 229.326px; top: 375.029px;"></section>
+    <section style="height: 11.005px; width: 11.005px; border-radius: 3px; left: 526.305px; top: 345.627px;"></section>
+    <section style="height: 12.0818px; width: 12.0818px; border-radius: 4px; left: -11.8651px; top: 481.067px;"></section>
+    <section style="height: 21.0129px; width: 21.0129px; border-radius: 7px; left: 317.909px; top: 497.717px;"></section>
+    <section style="height: 12.5181px; width: 12.5181px; border-radius: 4px; left: 931.275px; top: 460.462px;"></section>
+    <section style="height: 18.6898px; width: 18.6898px; border-radius: 4px; left: 755.793px; top: 86.8542px;"></section>
+    <section style="height: 16.9748px; width: 16.9748px; border-radius: 5px; left: 687.911px; top: 323.397px;"></section>
+    <section style="height: 19.4851px; width: 19.4851px; border-radius: 6px; left: 404.54px; top: 286.002px;"></section>
+    <section style="height: 16.7823px; width: 16.7823px; border-radius: 5px; left: 1108.99px; top: 138.83px;"></section>
+    <section style="height: 22.6932px; width: 22.6932px; border-radius: 7px; left: 924.941px; top: 491.817px;"></section>
+    <section style="height: 24.1416px; width: 24.1416px; border-radius: 3px; left: 813.117px; top: 448.781px;"></section>
+    <section style="height: 10.5387px; width: 10.5387px; border-radius: 3px; left: 21.0376px; top: 322.403px;"></section>
+    <section style="height: 13.1716px; width: 13.1716px; border-radius: 4px; left: 769.195px; top: 443.194px;"></section>
+    <section style="height: 21.8524px; width: 21.8524px; border-radius: 7px; left: 935.037px; top: 522.19px;"></section>
+    <section style="height: 15.542px; width: 15.542px; border-radius: 5px; left: 597.782px; top: 426.772px;"></section>
+    <section style="height: 14.3965px; width: 14.3965px; border-radius: 4px; left: 749.546px; top: 400.862px;"></section>
+    <section style="height: 22.8408px; width: 22.8408px; border-radius: 7px; left: 456.4px; top: -3.11904px;"></section>
+    <section style="height: 10.9789px; width: 10.9789px; border-radius: 3px; left: 697.303px; top: 330.231px;"></section>
+    <section style="height: 16.4876px; width: 16.4876px; border-radius: 5px; left: 57.1109px; top: 510.288px;"></section>
+    <section style="height: 23.4636px; width: 23.4636px; border-radius: 7px; left: 458.116px; top: 138.504px;"></section>
+    <section style="height: 14.2379px; width: 14.2379px; border-radius: 4px; left: 1025.24px; top: 500.437px;"></section>
+    <section style="height: 10.819px; width: 10.819px; border-radius: 3px; left: 217.624px; top: 200.93px;"></section>
+    <section style="height: 19.2394px; width: 19.2394px; border-radius: 6px; left: 294.859px; top: 188.337px;"></section>
+    <section style="height: 20.1582px; width: 20.1582px; border-radius: 6px; left: 343.698px; top: 433.341px;"></section>
+    <section style="height: 21.3327px; width: 21.3327px; border-radius: 7px; left: 604.754px; top: 321.884px;"></section>
+    <section style="height: 23.6436px; width: 23.6436px; border-radius: 7px; left: 746.779px; top: 374.18px;"></section>
+    <section style="height: 23.0053px; width: 23.0053px; border-radius: 7px; left: 723.402px; top: -13.4901px;"></section>
+    <section style="height: 21.7412px; width: 21.7412px; border-radius: 7px; left: 244.472px; top: 281.057px;"></section>
+    <section style="height: 15.4212px; width: 15.4212px; border-radius: 5px; left: 963.562px; top: 348.805px;"></section>
+    <section style="height: 16.5017px; width: 16.5017px; border-radius: 5px; left: 1089.21px; top: 525.06px;"></section>
+    <section style="height: 19.8854px; width: 19.8854px; border-radius: 4px; left: 574.568px; top: 79.4816px;"></section>
+    <section style="height: 15.1852px; width: 15.1852px; border-radius: 5px; left: 1.74677px; top: 417.59px;"></section>
+    <section style="height: 17.065px; width: 17.065px; border-radius: 3px; left: 259.556px; top: 92.3113px;"></section>
+    <section style="height: 17.0342px; width: 17.0342px; border-radius: 5px; left: 677.187px; top: 253.614px;"></section>
+    <section style="height: 20.49px; width: 20.49px; border-radius: 3px; left: 839.124px; top: -3.87921px;"></section>
+    <section style="height: 22.1072px; width: 22.1072px; border-radius: 7px; left: 468.756px; top: 458.361px;"></section>
+    <section style="height: 10.712px; width: 10.712px; border-radius: 3px; left: 851.599px; top: 230.532px;"></section>
+    <section style="height: 17.5671px; width: 17.5671px; border-radius: 5px; left: 926.163px; top: 143.284px;"></section>
+    <section style="height: 10.1627px; width: 10.1627px; border-radius: 3px; left: 980.787px; top: 457.701px;"></section>
+    <section style="height: 21.428px; width: 21.428px; border-radius: 7px; left: 172.84px; top: 86.5801px;"></section>
+    <section style="height: 19.7686px; width: 19.7686px; border-radius: 6px; left: 124.888px; top: 349.878px;"></section>
+    <section style="height: 15.6858px; width: 15.6858px; border-radius: 5px; left: 812.372px; top: 52.1349px;"></section>
+    <section style="height: 22.6475px; width: 22.6475px; border-radius: 7px; left: 110.185px; top: 429.828px;"></section>
+    <section style="height: 18.3478px; width: 18.3478px; border-radius: 4px; left: -14.2477px; top: 5.28047px;"></section>
+    <section style="height: 19.0321px; width: 19.0321px; border-radius: 6px; left: 1105.9px; top: 422.848px;"></section>
+    <section style="height: 18.4766px; width: 18.4766px; border-radius: 6px; left: 44.7249px; top: 352.795px;"></section>
+    <section style="height: 21.6427px; width: 21.6427px; border-radius: 7px; left: 501.978px; top: 454.627px;"></section>
+    <section style="height: 24.1831px; width: 24.1831px; border-radius: 4px; left: 395.442px; top: 201.418px;"></section>
+    <section style="height: 17.6428px; width: 17.6428px; border-radius: 5px; left: 870.368px; top: 44.2548px;"></section>
+    <section style="height: 13.4522px; width: 13.4522px; border-radius: 4px; left: 861.052px; top: 10.5338px;"></section>
+    <section style="height: 21.0712px; width: 21.0712px; border-radius: 6px; left: 217.244px; top: 226.748px;"></section>
+    <section style="height: 11.3664px; width: 11.3664px; border-radius: 3px; left: 382.417px; top: 101.145px;"></section>
+    <section style="height: 22.6394px; width: 22.6394px; border-radius: 7px; left: 39.446px; top: 474.762px;"></section>
+    <section style="height: 15.1957px; width: 15.1957px; border-radius: 5px; left: 1030.51px; top: 382.002px;"></section>
+    <section style="height: 15.1167px; width: 15.1167px; border-radius: 5px; left: 275.651px; top: 390.089px;"></section>
+    <section style="height: 15.9274px; width: 15.9274px; border-radius: 5px; left: 572.704px; top: 44.5826px;"></section>
+    <section style="height: 21.9999px; width: 21.9999px; border-radius: 5px; left: 161.038px; top: 212.131px;"></section>
+    <section style="height: 19.5786px; width: 19.5786px; border-radius: 6px; left: -19.4083px; top: 154.967px;"></section>
+    <section style="height: 24.265px; width: 24.265px; border-radius: 8px; left: 849.993px; top: 243.39px;"></section>
+    <section style="height: 22.0819px; width: 22.0819px; border-radius: 3px; left: 184.204px; top: 272.4px;"></section>
+    <section style="height: 19.6901px; width: 19.6901px; border-radius: 5px; left: 775.523px; top: 41.4977px;"></section>
+    <section style="height: 11.3688px; width: 11.3688px; border-radius: 3px; left: 200.483px; top: 147.276px;"></section>
+    <section style="height: 22.4054px; width: 22.4054px; border-radius: 7px; left: 425.496px; top: 505.663px;"></section>
+    <section style="height: 23.824px; width: 23.824px; border-radius: 7px; left: 7.77433px; top: 195.069px;"></section>
+    <section style="height: 11.6977px; width: 11.6977px; border-radius: 3px; left: 199.09px; top: 111.672px;"></section>
+    <section style="height: 12.8427px; width: 12.8427px; border-radius: 4px; left: 590.652px; top: 0.251278px;"></section>
+    <section style="height: 18.5169px; width: 18.5169px; border-radius: 6px; left: 319.309px; top: 530.403px;"></section>
+    <section style="height: 16.4906px; width: 16.4906px; border-radius: 5px; left: 719.939px; top: 365.848px;"></section>
+    <section style="height: 21.5647px; width: 21.5647px; border-radius: 4px; left: 992.472px; top: 445.489px;"></section>
+    <section style="height: 14.445px; width: 14.445px; border-radius: 4px; left: 779.541px; top: 52.9471px;"></section>
+    <section style="height: 18.3345px; width: 18.3345px; border-radius: 6px; left: 145.45px; top: 59.1428px;"></section>
+    <section style="height: 17.1286px; width: 17.1286px; border-radius: 3px; left: 37.4925px; top: 95.4635px;"></section>
+    <section style="height: 14.1247px; width: 14.1247px; border-radius: 4px; left: 248.751px; top: 492.381px;"></section>
+    <section style="height: 22.5698px; width: 22.5698px; border-radius: 7px; left: 968.883px; top: 96.8213px;"></section>
+    <section style="height: 24.9197px; width: 24.9197px; border-radius: 5px; left: 862.171px; top: 0.768683px;"></section>
+    -->
+</body>
+
+</html>
