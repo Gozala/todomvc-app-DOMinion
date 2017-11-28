@@ -48,7 +48,7 @@
     "build:schema:JSON": "flatc --ts src/Format/FlatBuffer/JSON.fbs/JSON.fbs && mv JSON_generated.ts src/Format/FlatBuffer/JSON.fbs/JSON.ts",
     "build:bundle": "rollup -c",
     "build:bundle:triangle": "rollup -w -c rollup.config.triangle.js",
-    "build": "npm run build:node && npm run build:types",
+    "build": "npm run build:bundle && npm run build:bundle:triangle",
     "prepublish": "npm run build && npm test",
     "precommit": "lint-staged",
     "start": "flow-copy-source --watch --verbose src lib & babel --watch --out-dir lib src"
