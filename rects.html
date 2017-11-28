@@ -112,7 +112,7 @@
         var lastRefTime = performance.now()
         var frameCount = 0;
         var fps = document.getElementById('fps')
-        function update() {
+        function update(now) {
             for (var i = 0; i < rects.length; i++) {
                 var element = rects[i];
                 element.x += element.deltaX;
@@ -123,7 +123,6 @@
             }
 
             frameCount++;
-            var now = performance.now();
             if (now >= lastRefTime + 1000.0) {
                 fps.textContent = frameCount
                 lastRefTime = now;
