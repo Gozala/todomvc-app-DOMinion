@@ -1,19 +1,22 @@
-# TodoMVC App Template
+This repository contains several examples in attempt to compare perfomance of
+[DOMinion][] library to other popular libraries.
 
-> Template used for creating [TodoMVC](http://todomvc.com) apps
+### Examlpes
 
-![](https://github.com/tastejs/todomvc-app-css/raw/master/screenshot.png)
+#### Moir
 
+* [DOMinion](https://gozala.github.io/vs-dominion/DOMinion/moir/)
+* [React](https://gozala.github.io/vs-dominion/React/moir/)
+* [Plain](https://gozala.github.io/vs-dominion/Plain/moir/)
 
-## Getting started
+#### React fiber triangle
 
-- Read the [Application Specification](https://github.com/tastejs/todomvc/blob/master/app-spec.md) before touching the template.
+* [DOMinion](https://gozala.github.io/vs-dominion/DOMinion/triangle/)
+* [React](https://gozala.github.io/vs-dominion/React/triangle/)
 
-- Delete this file and rename `app-readme.md` to `readme.md` and fill it out.
+#### Todo MVC
 
-- Clone this repo and install the dependencies with [npm](https://npmjs.com) by running: `npm install`.
+* [DOMinion](https://gozala.github.io/vs-dominion/DOMinion/todo/)
 
-
-## License
-
-<a rel="license" href="http://creativecommons.org/licenses/by/4.0/deed.en_US"><img alt="Creative Commons License" style="border-width:0" src="http://i.creativecommons.org/l/by/4.0/80x15.png" /></a><br />This <span xmlns:dct="http://purl.org/dc/terms/" href="http://purl.org/dc/dcmitype/InteractiveResource" rel="dct:type">work</span> by <a xmlns:cc="http://creativecommons.org/ns#" href="http://sindresorhus.com" property="cc:attributionName" rel="cc:attributionURL">TasteJS</a> is licensed under a <a rel="license" href="http://creativecommons.org/licenses/by/4.0/deed.en_US">Creative Commons Attribution 4.0 International License</a>.
+[dominion]: http://github.com/gozala/dominion
+[react]: http://facebook.github.io/react/

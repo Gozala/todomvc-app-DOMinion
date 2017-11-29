@@ -2,6 +2,7 @@
 
 import {
   type Node,
+  type integer,
   Decoder,
   className,
   input,
@@ -10,6 +11,8 @@ import {
   autofocus,
   placeholder,
   defaultValue,
+  min,
+  max,
   value,
   id,
   name,
@@ -49,8 +52,6 @@ import {
 } from "../DOM"
 import unreachable from "unreachable"
 
-var CIRCLE_COUNT = 70
-
 export class Model {
   n: number
   time: number
@@ -58,20 +59,36 @@ export class Model {
     this.n = n
     this.time = time
   }
-  static new(time: number = 0, n: number = CIRCLE_COUNT) {
+  static new(time: number = 0, n: number = 200) {
     return new Model(n, time)
   }
   static updateTime(model: Model, time: number) {
-    return new Model(model.n, time)
+    if (model.time === time) {
+      return model
+    } else {
+      return new Model(model.n, time)
+    }
+  }
+  static updateCount(model: Model, n: number) {
+    if (model.n === n) {
+      return model
+    } else {
+      return new Model(n, model.time)
+    }
   }
 }
 
-export type Message = { type: "Tick", time: number }
+export type Message =
+  | { type: "Tick", time: number }
+  | { type: "UpdateCount", n: Decoder.integer }
 
 export const update = (message: Message, model: Model): [Model, () => void] => {
   switch (message.type) {
     case "Tick":
       return [Model.updateTime(model, message.time), ignore]
+    case "UpdateCount": {
+      return [Model.updateCount(model, message.n), ignore]
+    }
     default:
       return unreachable(message)
   }
@@ -81,9 +98,26 @@ const ignore = () => {}
 
 export const view = ({ time, n }: Model): Node<Message> => {
   const t = time / 1600
-  return main([styleBackground(t)], [viewOrbiting(t, n), viewLemniscate(t, n)])
+  return main(
+    [styleBackground(t)],
+    [viewControl(n), viewOrbiting(t, n), viewLemniscate(t, n)]
+  )
 }
 
+const viewControl = n =>
+  input([
+    id("circle-count"),
+    type("range"),
+    min(30),
+    max(500),
+    value(n),
+    onChange(UpdateCount)
+  ])
+
+const UpdateCount = Decoder.form({
+  type: Decoder.ok("UpdateCount"),
+  n: Decoder.at(["target", "valueAsNumber"], Decoder.Integer)
+})
 const styleBackground = t => style({ backgroundColor: backgroundColor(t) })
 
 const viewObject = (t, n, x, y) =>
@@ -95,7 +129,7 @@ const viewObject = (t, n, x, y) =>
         top: `${y}px`
       })
     ],
-    [viewCircle(t, n)]
+    [viewCircle(t, n, n)]
   )
 
 const viewOrbiting = (t, n) => {
@@ -112,27 +146,27 @@ const viewLemniscate = (t, n) => {
   return viewObject(t, n, x, y)
 }
 
-const viewCircle = (t, n) => {
+const viewCircle = (t, n, count) => {
   const r = n * 16
   return div(
-    [className(`circle`), data("radius", `${r}`), styleCircle(t, n, r)],
-    n == 0 ? [] : [viewCircle(t, n - 1)]
+    [className(`circle`), data("radius", `${r}`), styleCircle(t, n, r, count)],
+    n == 0 ? [] : [viewCircle(t, n - 1, count)]
   )
 }
 
-const styleCircle = (t, n, r) =>
+const styleCircle = (t, n, r, count) =>
   style({
-    borderColor: colorCircle(t, n),
+    borderColor: colorCircle(t, n, count),
     marginLeft: `-${r / 2 + 3}px`,
     marginTop: `-${r / 2 + 3}px`,
     width: `${r}px`,
     height: `${r}px`
   })
 
-const colorCircle = (t, n) => {
+const colorCircle = (t, n, count) => {
   t /= 3.0
   const base = getInterpolatedColor("fg", t % 1.0)
-  const lightness = 1.0 - n / CIRCLE_COUNT
+  const lightness = 1.0 - n / count
   return getCSSRGBAColor(base.r, base.g, base.b, lightness)
 }
 

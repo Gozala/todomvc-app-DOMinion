@@ -35,6 +35,12 @@
             font-size: 150%;
             z-index: 10;
         }
+
+        #circle-count {
+            position: absolute;
+            margin-top: 30px;
+            z-index: 2;
+        }
     </style>
 </head>
 
@@ -132,7 +138,6 @@
             };
         }
 
-        var CIRCLE_COUNT = 70;
 
         function parseCSSColorToHSV(color) {
             var r = parseInt(color.substr(1, 2), 16);
@@ -225,30 +230,30 @@
             `rgb(${r}, ${g}, ${b})`
 
         class Circle extends React.Component {
-            static style(t, n, r) {
+            static style(t, n, count, r) {
                 return {
-                    borderColor: Circle.color(t, n),
+                    borderColor: Circle.color(t, n, count),
                     marginLeft: `-${(r / 2) + 3}px`,
                     marginTop: `-${(r / 2) + 3}px`,
                     width:`${r}px`,
                     height:`${r}px`
                 }
             }
-            static view(id, t, n, r) {
-                return <div class={`circle ${id}`} data-radius={r} style={Circle.style(t, n, r)}>
-                    {n >= 1 ? <Circle id={id} t={t} n={n - 1} /> : ""}
+            static view(t, n, count, r) {
+                return <div class={`circle`} data-radius={r} style={Circle.style(t, n, count, r)}>
+                    {n >= 1 ? <Circle t={t} n={n - 1} count={count} /> : ""}
                 </div>
             }
-            static color(t, n) {
+            static color(t, n, count) {
               t /= 3.0;
               const base = getInterpolatedColor('fg', t % 1.0)
-              const lightness = 1.0 - n / CIRCLE_COUNT
+              const lightness = 1.0 - n / count
               return getCSSRGBAColor(base.r, base.g, base.b, lightness);
             }
             render() {
-              const {n, t, id, x, y} = this.props
+              const {n, t, count} = this.props
 
-              return Circle.view(id, t, n, n * 16)
+              return Circle.view(t, n, count, n * 16)
             }
         }
 
@@ -261,7 +266,7 @@
             }
             static view(t, n, x, y) {
                 return <div class="object" style={MovingObject.style(x, y)}>
-                    <Circle t={t} n={n} />
+                    <Circle t={t} n={n} count={n} />
                 </div>
             }
         }
@@ -287,18 +292,28 @@
         }
 
         class Moir extends React.Component {
+            constructor(props) {
+                super(props)
+                this.state = {count:200}
+                this.onChange = this.onChange.bind(this)
+            }
             static style(t) {
                 return {backgroundColor:backgroundColor(t)}
             }
-            static view(t) {
+            onChange(event) {
+                const value = event.target.valueAsNumber
+                this.setState((state, props) => ({count:value}))
+            }
+            static view(t, count, onChange) {
                 return <main style={Moir.style(t)}>
-                    <OrbitingObject t={t} n={CIRCLE_COUNT} />
-                    <LemniscateObject t={t} n={CIRCLE_COUNT} />
+                    <input id="circle-count" type="range" min={30} max={500} value={count} onChange={onChange} />
+                    <OrbitingObject t={t} n={count} />
+                    <LemniscateObject t={t} n={count} />
                 </main>
             }
             
             render() {
-                return Moir.view(this.props.elapsed / 1600)
+                return Moir.view(this.props.elapsed / 1600, this.state.count, this.onChange)
             }
         }
 

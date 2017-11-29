@@ -43,13 +43,7 @@ class Program<message, model> {
     }
   }
   schedule(state: model): void {
-    this.state = state
-
-    if (this.requestID == null) {
-      this.requestID = vsync.requestAnimationFrame(() =>
-        this.transact(this.state)
-      )
-    }
+    this.transact(state)
   }
   send<a>(payload: a, path: number[]): void {
     const action = Program.toMessage(this.node, path, payload)

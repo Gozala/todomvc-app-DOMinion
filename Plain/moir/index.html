@@ -38,15 +38,24 @@
             font-size: 150%;
             z-index: 10;
         }
+
+        #circle-count {
+            position: absolute;
+            margin-top: 30px;
+            z-index: 2;
+        }
     </style>
 </head>
 
 <body>
     <code>FPS:<output id="fps"></code></code>
-    <main>
-        <div id=object-a class=object></div>
-        <div id=object-b class=object></div>
-    </main>
+    <div id="scene">
+        <main id="main">
+            <input id="circle-count" type="range" value="200" min="30" max="500" />
+            <div id=object-a class=object></div>
+            <div id=object-b class=object></div>
+        </main>
+    </div>
     <script>
         function rgbToHSV(originalR, originalG, originalB) {
             var rr, gg, bb,
@@ -135,7 +144,6 @@
             };
         }
 
-        var CIRCLE_COUNT = 35;
 
         function parseCSSColorToHSV(color) {
             var r = parseInt(color.substr(1, 2), 16);
@@ -198,18 +206,15 @@
             container.appendChild(div);
         }
 
-        function makeCircles(container) {
-            for (var i = 0; i < CIRCLE_COUNT; i++) {
-                var gray = 255 - Math.round((CIRCLE_COUNT - i - 1) * 1.0);
+        function makeCircles(container, count) {
+            container.innerHTML = ""
+            for (var i = 0; i < count; i++) {
+                var gray = 255 - Math.round((count - i - 1) * 1.0);
                 var color = "rgb(" + gray + ", " + gray + ", " + gray + ")";
                 makeCircle(container, 'a', color, i * 16);
             }
         }
 
-        var objectA = document.getElementById('object-a');
-        var objectB = document.getElementById('object-b');
-        makeCircles(objectA);
-        makeCircles(objectB);
 
         var startTime = 0
         function positionObject(object, x, y) {
@@ -245,19 +250,19 @@
             return "rgba(" + r + ", " + g + ", " + b + ", " + a + ")";
         }
 
-        function updateBackgroundColor(t) {
+        function updateBackgroundColor(target, t) {
             t /= 3.0;
             var interpolatedColor = getInterpolatedColor('bg', t % 1.0);
             var color = getCSSColor(interpolatedColor.r, interpolatedColor.g, interpolatedColor.b);
-            document.body.style.backgroundColor = color;
+            target.style.backgroundColor = color;
         }
 
-        function updateColorsOfObject(object, t) {
+        function updateColorsOfObject(object, t, count) {
             t /= 3.0;
             var base = getInterpolatedColor('fg', t % 1.0);
             var i = 0;
             for (var kid = object.firstChild; kid !== null; kid = kid.nextSibling) {
-                var lightness = 1.0 - i / CIRCLE_COUNT;
+                var lightness = 1.0 - i / count;
                 var color = getCSSRGBAColor(base.r, base.g, base.b, lightness);
                 kid.style.borderColor = color;
                 i++;
@@ -276,13 +281,28 @@
             }
         }
 
+        let lastCount = 0
+
+        var objectA = document.getElementById('object-a');
+        var objectB = document.getElementById('object-b');
+        var main = document.getElementById('main');
+        var circleCount = document.getElementById('circle-count');
+
         function next(now) {
             var t = (now - startTime) / 1600;
-            updateOrbitingObject(objectA, t);
-            updateLemniscateObject(objectB, t);
-            updateBackgroundColor(t);
-            updateColorsOfObject(objectA, t);
-            updateColorsOfObject(objectB, t);
+            var count = circleCount.valueAsNumber
+            updateBackgroundColor(main, t);
+            if (lastCount === count) {
+                updateOrbitingObject(objectA, t);
+                updateLemniscateObject(objectB, t);
+                updateColorsOfObject(objectA, t, count);
+                updateColorsOfObject(objectB, t, count);
+            } else {
+                lastCount = count
+                makeCircles(objectA, count)
+                makeCircles(objectB, count)
+            }
+
             updateFPS(now);
             requestAnimationFrame(next);
         }

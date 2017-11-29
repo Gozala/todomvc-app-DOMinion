@@ -2,6 +2,7 @@
 import * as DOMinion from "dominion"
 import * as Decoder from "dominion/node_modules/decoder.flow"
 
+export type integer = Decoder.integer
 export { Decoder, DOMinion }
 export type { Node, Setting } from "dominion"
 
@@ -28,6 +29,8 @@ export const placeholder = attribute("placeholder")
 export const autofocus = attribute("autofocus")
 export const defaultValue = property("defaultValue")
 export const value = property("value")
+export const min = property("min")
+export const max = property("max")
 export const section = element("section")
 export const label = element("label")
 export const ul = element("ul")

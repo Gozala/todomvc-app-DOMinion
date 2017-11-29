@@ -65,7 +65,7 @@
       "flow-copy-source --watch --verbose src lib & babel --watch --out-dir lib src"
   },
   "lint-staged": {
-    "*.js": ["prettier --parser flow --no-semi --write", "git add"]
+    "src/**/*.js": ["prettier --parser flow --no-semi --write", "git add"]
   },
   "quokka": {
     "alias": {
