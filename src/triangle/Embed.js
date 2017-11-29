@@ -4,7 +4,7 @@ import { DOMinion } from "../DOM"
 import FlatBuffer from "dominion/src/Format/FlatBuffer"
 import Log from "dominion/src/Patch/Log"
 
-const worker = new Worker("./js/triangle/worker.js")
+const worker = new Worker("./Main.js")
 
 const indexOf = (child: Node, parent: Node): ?number => {
   let index = 0

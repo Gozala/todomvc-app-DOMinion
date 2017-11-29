@@ -20,6 +20,7 @@ export const property = (name: string) => (
 export const thunk = DOMinion.createThunk
 export const className = attribute("class")
 export const header = element("header")
+export const main = element("main")
 export const h1 = element("h1")
 export const h3 = element("h3")
 export const input = element("input")
@@ -44,6 +45,8 @@ export const name = attribute("name")
 export const href = attribute("href")
 export const type = attribute("type")
 export const For = attribute("for")
+export const data = (name: string, value: string) =>
+  DOMinion.setAttribute(`data-${name}`, value)
 export const checked = attribute("checked")
 export const on = (type: string) => <a>(
   decoder: Decoder.Decoder<?a>,

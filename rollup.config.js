@@ -11,22 +11,18 @@ import livereload from "rollup-plugin-livereload"
 
 const flatbuffersPath = require.resolve("dominion/node_modules/flatbuffers")
 
-const server = serve()
-const reload = livereload()
-
-const config = (file, server, reload) => ({
+const bundle = (file, ...plugins) => ({
   input: `./src/${file}.js`,
   output: {
-    file: `./js/${file}.js`,
+    file: `./DOMinion/${file}.js`,
     format: "iife",
-    // intro: "window.global = window;",
-    name: `${file}`,
     sourcemap: true
   },
   moduleContext: {
     [flatbuffersPath]: "({})"
   },
   plugins: [
+    ...plugins,
     babel({
       babelrc: false,
       presets: [flowSyntax]
@@ -47,4 +43,13 @@ const config = (file, server, reload) => ({
     commonjs()
   ]
 })
-export default [config("worker", null, null), config("app", server, reload)]
+
+const watch =
+  process.argv.includes("-w") || process.argv.includes("--watch")
+    ? [serve(), livereload()]
+    : []
+
+export default [
+  bundle(`${String(process.env.BUNDLE)}/Main`),
+  bundle(`${String(process.env.BUNDLE)}/Embed`, ...watch)
+]

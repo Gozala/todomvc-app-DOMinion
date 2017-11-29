@@ -18,9 +18,6 @@
             position: absolute;
             top: 50%;
             left: 50%;
-        }
-
-        .a {
             border-style: solid;
             border-width: 3px;
         }
@@ -43,11 +40,11 @@
 
 <body>
     <code>FPS:<output id="fps"></code></code>
-    <main>
-        <div id=object-a class=object></div>
-        <div id=object-b class=object></div>
-    </main>
-    <script>
+    <div id="scene"></div>
+    <script src="../react.production.min.js"></script>
+    <script src="../react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/babel-standalone@6/babel.js"></script>
+    <script type="text/babel">
         function rgbToHSV(originalR, originalG, originalB) {
             var rr, gg, bb,
                 r = originalR / 255,
@@ -135,7 +132,7 @@
             };
         }
 
-        var CIRCLE_COUNT = 35;
+        var CIRCLE_COUNT = 70;
 
         function parseCSSColorToHSV(color) {
             var r = parseInt(color.substr(1, 2), 16);
@@ -186,50 +183,8 @@
             return result;
         }
 
-        function makeCircle(container, klass, color, radius) {
-            var div = document.createElement('div');
-            div.setAttribute('class', "circle " + klass);
-            div.setAttribute('data-radius', radius);
-            div.style.borderColor = color;
-            div.style.marginLeft = -(radius / 2) + 'px';
-            div.style.marginTop = -(radius / 2) + 'px';
-            div.style.width = radius + 'px';
-            div.style.height = radius + 'px';
-            container.appendChild(div);
-        }
-
-        function makeCircles(container) {
-            for (var i = 0; i < CIRCLE_COUNT; i++) {
-                var gray = 255 - Math.round((CIRCLE_COUNT - i - 1) * 1.0);
-                var color = "rgb(" + gray + ", " + gray + ", " + gray + ")";
-                makeCircle(container, 'a', color, i * 16);
-            }
-        }
-
-        var objectA = document.getElementById('object-a');
-        var objectB = document.getElementById('object-b');
-        makeCircles(objectA);
-        makeCircles(objectB);
-
         var startTime = 0
-        function positionObject(object, x, y) {
-            object.style.left = x + 'px';
-            object.style.top = y + 'px';
-        }
-
-        function updateOrbitingObject(object, t) {
-            var d = 200;
-            var x = Math.sin(t) * d,
-                y = Math.cos(t) * d;
-            positionObject(object, x, y);
-        }
-
-        function updateLemniscateObject(object, t) {
-            var a = 150;
-            var x = a * Math.sin(t);
-            var y = a * Math.sin(t) * Math.cos(t);
-            positionObject(object, x, y);
-        }
+        
 
         function getCSSColor(r, g, b) {
             r = Math.round(clamp(0, 255, r));
@@ -245,47 +200,115 @@
             return "rgba(" + r + ", " + g + ", " + b + ", " + a + ")";
         }
 
-        function updateBackgroundColor(t) {
+        function backgroundColor(t) {
             t /= 3.0;
             var interpolatedColor = getInterpolatedColor('bg', t % 1.0);
             var color = getCSSColor(interpolatedColor.r, interpolatedColor.g, interpolatedColor.b);
-            document.body.style.backgroundColor = color;
+            return color
         }
 
-        function updateColorsOfObject(object, t) {
-            t /= 3.0;
-            var base = getInterpolatedColor('fg', t % 1.0);
-            var i = 0;
-            for (var kid = object.firstChild; kid !== null; kid = kid.nextSibling) {
-                var lightness = 1.0 - i / CIRCLE_COUNT;
-                var color = getCSSRGBAColor(base.r, base.g, base.b, lightness);
-                kid.style.borderColor = color;
-                i++;
-            }
-        }
-
-        {
-
-            let lastTime = performance.now()
-            const fps = document.getElementById('fps')
-            const tick = (time) => {
-                fps.textContent = Math.round(1000 / (time - lastTime))
+        
+        let lastTime = 0
+        let frameCount = 0
+        const fps = document.getElementById('fps')
+        function updateFPS(time) {
+            frameCount++
+            if (lastTime + 1000.0 <= time) {
+                fps.textContent = frameCount
                 lastTime = time
-                requestAnimationFrame(tick)
+                frameCount = 0
             }
-            requestAnimationFrame(tick)
         }
 
-        function next(now) {
-            var t = (now - startTime) / 1600;
-            updateOrbitingObject(objectA, t);
-            updateLemniscateObject(objectB, t);
-            updateBackgroundColor(t);
-            updateColorsOfObject(objectA, t);
-            updateColorsOfObject(objectB, t);
-            requestAnimationFrame(next);
+
+        const rgb = (r, g, b) =>
+            `rgb(${r}, ${g}, ${b})`
+
+        class Circle extends React.Component {
+            static style(t, n, r) {
+                return {
+                    borderColor: Circle.color(t, n),
+                    marginLeft: `-${(r / 2) + 3}px`,
+                    marginTop: `-${(r / 2) + 3}px`,
+                    width:`${r}px`,
+                    height:`${r}px`
+                }
+            }
+            static view(id, t, n, r) {
+                return <div class={`circle ${id}`} data-radius={r} style={Circle.style(t, n, r)}>
+                    {n >= 1 ? <Circle id={id} t={t} n={n - 1} /> : ""}
+                </div>
+            }
+            static color(t, n) {
+              t /= 3.0;
+              const base = getInterpolatedColor('fg', t % 1.0)
+              const lightness = 1.0 - n / CIRCLE_COUNT
+              return getCSSRGBAColor(base.r, base.g, base.b, lightness);
+            }
+            render() {
+              const {n, t, id, x, y} = this.props
+
+              return Circle.view(id, t, n, n * 16)
+            }
         }
-        requestAnimationFrame(next);
+
+        class MovingObject {
+            static style(x, y) {
+                return {
+                    left: `${x}px`,
+                    top: `${y}px`
+                }
+            }
+            static view(t, n, x, y) {
+                return <div class="object" style={MovingObject.style(x, y)}>
+                    <Circle t={t} n={n} />
+                </div>
+            }
+        }
+
+        class OrbitingObject extends React.Component {
+            render() {
+                const {t, n} = this.props
+                const d = 200;
+                const x = Math.sin(t) * d
+                const y = Math.cos(t) * d
+                return MovingObject.view(t, n, x, y)
+            }
+        }
+
+        class LemniscateObject extends React.Component {
+            render() {
+                const {t, n} = this.props
+                var a = 150;
+                var x = a * Math.sin(t);
+                var y = a * Math.sin(t) * Math.cos(t);
+                return MovingObject.view(t, n, x, y)
+            }
+        }
+
+        class Moir extends React.Component {
+            static style(t) {
+                return {backgroundColor:backgroundColor(t)}
+            }
+            static view(t) {
+                return <main style={Moir.style(t)}>
+                    <OrbitingObject t={t} n={CIRCLE_COUNT} />
+                    <LemniscateObject t={t} n={CIRCLE_COUNT} />
+                </main>
+            }
+            
+            render() {
+                return Moir.view(this.props.elapsed / 1600)
+            }
+        }
+
+        const scene = document.querySelector('#scene')
+        const update = (now) => {
+            ReactDOM.render(<Moir elapsed={now - startTime} />, scene)
+            updateFPS(now)
+            requestAnimationFrame(update);
+        }
+        requestAnimationFrame(update);
     </script>
 
 </html>

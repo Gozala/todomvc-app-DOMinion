@@ -1,10 +1,10 @@
 // @flow
 
-import { DOMinion } from "./DOM"
+import { DOMinion } from "../DOM"
 import FlatBuffer from "dominion/src/Format/FlatBuffer"
 import Log from "dominion/src/Patch/Log"
 
-const worker = new Worker("./js/worker.js")
+const worker = new Worker("./Main.js")
 
 const indexOf = (child: Node, parent: Node): ?number => {
   let index = 0
@@ -64,3 +64,22 @@ worker.onmessage = event => {
     console.error(result)
   }
 }
+
+let lastTime = 0
+let frameCount = 0
+const fps = document.getElementById("fps") || document.createElement("div")
+function updateFPS(time) {
+  frameCount++
+  if (lastTime + 1000.0 <= time) {
+    fps.textContent = `${frameCount}`
+    lastTime = time
+    frameCount = 0
+  }
+}
+
+const scene = document.querySelector("#scene")
+const update = now => {
+  updateFPS(now)
+  requestAnimationFrame(update)
+}
+requestAnimationFrame(update)

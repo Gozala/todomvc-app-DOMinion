@@ -33,7 +33,7 @@ import {
   span,
   strong,
   onEnter
-} from "./DOM"
+} from "../DOM"
 
 import * as Task from "./Task"
 import unreachable from "unreachable"

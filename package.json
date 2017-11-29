@@ -41,23 +41,31 @@
     "build:types": "flow-copy-source --verbose src lib",
     "build:node": "babel --out-dir lib src",
     "build:api": "documentation readme --section=API src/dominion.js",
-    "build:docs": "documentation build --document-exported src/** -f html --o docs",
-    "build:schema": "npm run build:schema:ChangeLog && npm run build:schema:Decoder && npm run build:schema:JSON",
-    "build:schema:ChangeLog": "flatc --ts src/Format/FlatBuffer/ChangeLog.fbs/ChangeLog.fbs && mv ChangeLog_generated.ts src/Format/FlatBuffer/ChangeLog.fbs/ChangeLog.ts",
-    "build:schema:Decoder": "flatc --ts src/Format/FlatBuffer/Decoder.fbs/Decoder.fbs && mv Decoder_generated.ts src/Format/FlatBuffer/Decoder.fbs/Decoder.ts",
-    "build:schema:JSON": "flatc --ts src/Format/FlatBuffer/JSON.fbs/JSON.fbs && mv JSON_generated.ts src/Format/FlatBuffer/JSON.fbs/JSON.ts",
-    "build:bundle": "rollup -c",
-    "build:bundle:triangle": "rollup -w -c rollup.config.triangle.js",
-    "build": "npm run build:bundle && npm run build:bundle:triangle",
+    "build:docs":
+      "documentation build --document-exported src/** -f html --o docs",
+    "build:schema":
+      "npm run build:schema:ChangeLog && npm run build:schema:Decoder && npm run build:schema:JSON",
+    "build:schema:ChangeLog":
+      "flatc --ts src/Format/FlatBuffer/ChangeLog.fbs/ChangeLog.fbs && mv ChangeLog_generated.ts src/Format/FlatBuffer/ChangeLog.fbs/ChangeLog.ts",
+    "build:schema:Decoder":
+      "flatc --ts src/Format/FlatBuffer/Decoder.fbs/Decoder.fbs && mv Decoder_generated.ts src/Format/FlatBuffer/Decoder.fbs/Decoder.ts",
+    "build:schema:JSON":
+      "flatc --ts src/Format/FlatBuffer/JSON.fbs/JSON.fbs && mv JSON_generated.ts src/Format/FlatBuffer/JSON.fbs/JSON.ts",
+    "build:todo": "export BUNDLE=todo && rollup -c",
+    "build:triangle": "export BUNDLE=triangle && rollup -c",
+    "build:moir": "export BUNDLE=moir && rollup -c",
+    "build":
+      "npm run build:todo && npm run build:triangle && npm run build:moir",
     "prepublish": "npm run build && npm test",
     "precommit": "lint-staged",
-    "start": "flow-copy-source --watch --verbose src lib & babel --watch --out-dir lib src"
+    "start:todo": "export BUNDLE=todo && rollup -w -c",
+    "start:triangle": "export BUNDLE=triangle && rollup -w -c",
+    "start:moir": "export BUNDLE=moir && rollup -w -c",
+    "start":
+      "flow-copy-source --watch --verbose src lib & babel --watch --out-dir lib src"
   },
   "lint-staged": {
-    "*.js": [
-      "prettier --parser flow --no-semi --write",
-      "git add"
-    ]
+    "*.js": ["prettier --parser flow --no-semi --write", "git add"]
   },
   "quokka": {
     "alias": {
@@ -68,9 +76,6 @@
     },
     "pro": true,
     "babel": true,
-    "plugins": [
-      "alias-quokka-plugin",
-      "jsdom-quokka-plugin"
-    ]
+    "plugins": ["alias-quokka-plugin", "jsdom-quokka-plugin"]
   }
 }

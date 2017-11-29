@@ -26,7 +26,7 @@ import {
   onBlur,
   onEnter,
   onDoubleClick
-} from "./DOM"
+} from "../DOM"
 
 export const view = (model: Model): Node<Message> =>
   li(
