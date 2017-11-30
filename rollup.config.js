@@ -57,6 +57,8 @@ const embed = process.argv.includes("--embed")
   ? process.argv[process.argv.indexOf("--embed") + 1].split(",")
   : []
 
+console.log(...watch)
+
 export default [
   ...workers.map(bundle),
   ...embed.map(path => bundle(path, ...watch))

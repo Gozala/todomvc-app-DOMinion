@@ -52,18 +52,18 @@
     "build:schema:JSON":
       "flatc --ts src/Format/FlatBuffer/JSON.fbs/JSON.fbs && mv JSON_generated.ts src/Format/FlatBuffer/JSON.fbs/JSON.ts",
     "build:todo": "rollup -c --worker todo/Main --embed todo/Main",
-    "build:triangle": "rollup -c --worker triangle/Main --embed triangle/Main",
-    "build:moir": "rollup -c --worker moir/Main --embed moir/Main",
+    "build:triangle": "rollup -c --worker triangle/Main --embed triangle/Embed",
+    "build:moir": "rollup -c --worker moir/Main --embed moir/Embed",
     "build:parallel-moir":
       "rollup -c --worker parallel-moir/Moir,parallel-moir/Orbiting,parallel-moir/Leminscate --embed parallel-moir/Embed",
     "build":
-      "npm run build:todo && npm run build:triangle && npm run build:moir",
+      "npm run build:todo && npm run build:triangle && npm run build:moir && npm run build:parallel-moir",
     "prepublish": "npm run build && npm test",
     "precommit": "lint-staged",
-    "start:todo": "rollup -w -c --worker todo/Main --embed todo/Main",
+    "start:todo": "rollup -w -c --worker todo/Main --embed todo/Embed",
     "start:triangle":
       "rollup -w -c --worker triangle/Main --embed triangle/Main",
-    "start:moir": "rollup -w -c --worker moir/Main --embed moir/Main",
+    "start:moir": "rollup -w -c --worker moir/Main --embed moir/Embed",
     "start:parallel-moir":
       "rollup -c -w --worker parallel-moir/Moir,parallel-moir/Orbiting,parallel-moir/Leminscate --embed parallel-moir/Embed",
     "start":

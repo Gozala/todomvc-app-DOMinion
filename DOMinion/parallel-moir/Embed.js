@@ -1,4 +1,3 @@
-(function(l, i, v, e) { v = l.createElement(i); v.async = 1; v.src = '//' + (location.host || 'localhost').split(':')[0] + ':35729/livereload.js?snipver=1'; e = l.getElementsByTagName(i)[0]; e.parentNode.insertBefore(v, e)})(document, 'script');
 (function () {
 'use strict';
 
@@ -15,6 +14,11 @@ const nil = Object.freeze([]);
 
 // Abstract out the table in case I want to edit the implementation to
 // arrays of arrays or something.
+
+
+
+// Constructor for operations (which are a stream of edits). Uses
+// variation of Levenshtein Distance.
 
 const empty$1 = Object.freeze([]);
 const blank$1 = Object.freeze(Object.create(null));
@@ -67,6 +71,10 @@ class Ok {
   }
 }
 
+/**
+ * Represents failer result and contains result `error`.
+ * @param x type of the `error` value for failed result.
+ */
 class Error$1 {
   /**
    * @param error Error value of this result.
@@ -850,6 +858,15 @@ class Maybe {
     this.maybe = decoder;
   }
 }
+
+/**
+ * Parses given `input` string into a JSON value and then runs given
+ * `Decoder<a>` on it. Returns `Result` with `Result.Error<Decoder.ParseError>`
+ * if the string is not well-formed JSON or `Result.Error<Decoder.Error>` if
+ * the value can't be decoded with a given `Decoder<a>`. If operation is
+ * successfull returns `Result.Ok<a>`.
+ */
+
 
 /**
  * Runs given `Decoder<a>` on a given JSON value. Returns `Result` that either
@@ -1667,7 +1684,8 @@ const mount = DOMPatch.archive;
 var flatbuffers = {};
 
 /**
- * @typedef {number}
+ * @type {number}
+ * @const
  */
 flatbuffers.SIZEOF_SHORT = 2;
 
@@ -2810,9 +2828,6 @@ flatbuffers.ByteBuffer.prototype.createLong = function (low, high) {
 // Exports for Node.js and RequireJS
 ({}).flatbuffers = flatbuffers;
 
-/// @endcond
-/// @}
-
 class DecoderError {
   constructor() {
     this.isError = true;
@@ -2866,6 +2881,10 @@ class VariantError extends DecoderError {
 // Rewrite all overloads for string field methods.
 // Replace flatbuffers.Encoding with flatbuffers.EncodingValue
 
+/**
+ * @enum
+ */
+// export namespace JSON{
 const JSONVariant = {
   NONE: 0,
   Boolean: 1,
@@ -3579,6 +3598,10 @@ class Float$3 {
 // Replace all `/** @type {Value} */ (this.bb.readInt8(this.bb_pos + offset))` with `((this.bb.readInt8(this.bb_pos + offset):any):Value)`
 // Replace all `/** @type {JSON} */ (this.bb.readUint8(this.bb_pos + offset))` with `((this.bb.readUint8(this.bb_pos + offset):any):JSON)`
 
+/**
+ * @enum
+ */
+// // export namespace Decoder{
 const decoder = {
   NONE: 0,
   Error: 1,
@@ -9918,21 +9941,23 @@ const moirView = Process.spawn("./Moir.js", scene);
 const orbitingView = Process.spawn("./Orbiting.js", scene);
 const lemniscateView = Process.spawn("./Leminscate.js", scene);
 
-const select = (first, ...rest) => {
-  let selection = first;
-  for (const process of rest) {
-    if (process.mailbox.length > selection.mailbox.length) {
-      selection = process;
-    }
-  }
-  return selection;
-};
-
+let n = 0;
 const update = now => {
-  const process = select(moirView, orbitingView, lemniscateView);
-  while (process.mailbox.length) {
-    process.tick();
+  switch (n) {
+    case 0:
+      moirView.tick();
+      n = 1;
+      break;
+    case 1:
+      orbitingView.tick();
+      n = 2;
+      break;
+    default:
+      lemniscateView.tick();
+      n = 0;
+      break;
   }
+
   updateFPS(now);
   requestAnimationFrame(update);
 };

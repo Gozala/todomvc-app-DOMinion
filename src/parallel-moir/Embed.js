@@ -29,11 +29,23 @@ const select = (first, ...rest) => {
   return selection
 }
 
+let n: 0 | 1 | 2 = 0
 const update = now => {
-  const process = select(moirView, orbitingView, lemniscateView)
-  while (process.mailbox.length) {
-    process.tick()
+  switch (n) {
+    case 0:
+      moirView.tick()
+      n = 1
+      break
+    case 1:
+      orbitingView.tick()
+      n = 2
+      break
+    default:
+      lemniscateView.tick()
+      n = 0
+      break
   }
+
   updateFPS(now)
   requestAnimationFrame(update)
 }
