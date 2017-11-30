@@ -1158,14 +1158,14 @@ class DOMPatch {
   }
   static addEventDecoder(state, type, decoder, capture$$1) {
     const node = getUpdateTargetElement(state.childrenSelected, state.target);
-    const host = node.DOMinion || (node.DOMinion = new DOMinion(state.mailbox));
-    host.addEventDecoder(node, type, decoder, capture$$1);
+    const host = node.DOMinion || (node.DOMinion = new DOMinion());
+    host.addEventDecoder(node, state.mailbox, type, decoder, capture$$1);
     return state;
   }
   static removeEventDecoder(state, type, decoder, capture$$1) {
     const node = getUpdateTargetElement(state.childrenSelected, state.target);
-    const host = node.DOMinion || (node.DOMinion = new DOMinion(state.mailbox));
-    host.removeEventDecoder(node, type, decoder, capture$$1);
+    const host = node.DOMinion || (node.DOMinion = new DOMinion());
+    host.removeEventDecoder(node, state.mailbox, type, decoder, capture$$1);
     return state;
   }
 
@@ -1214,8 +1214,9 @@ class DOMPatch {
 const CAPTURING_PHASE = 1;
 
 class DOMinion {
-  constructor(mailbox) {
-    this.mailbox = mailbox;
+  constructor() {
+    this.address = 0;
+
     this.decoders = Object.create(null);
   }
   static handleEvent(event) {
@@ -1225,23 +1226,37 @@ class DOMinion {
     const capture$$1 = event.eventPhase === CAPTURING_PHASE;
     if (host) {
       const hash = `${event.type}${capture$$1 ? "!" : "^"}`;
-      const decoder = host.decoders[hash];
-      if (decoder) {
-        const detail = decode(decoder, event);
-        host.mailbox.send(detail, event);
+      const decoders = host.decoders[hash];
+      if (decoders) {
+        for (let address in decoders) {
+          const handler = decoders[address];
+          if (handler) {
+            const { decoder, mailbox } = handler;
+            const detail = decode(decoder, event);
+            mailbox.send(detail, event);
+          } else {
+            delete decoders[address];
+          }
+        }
         return null;
       }
     }
     currentTarget.removeEventListener(type, DOMinion.handleEvent, capture$$1);
   }
-  addEventDecoder(target, type, decoder, capture$$1) {
+  addEventDecoder(target, mailbox, type, decoder, capture$$1) {
     const hash = `${type}${capture$$1 ? "!" : "^"}`;
-    this.decoders[hash] = decoder;
+    const decoders = this.decoders[hash] || (this.decoders[hash] = Object.create(null));
+    const address = mailbox.address || (mailbox.address = ++this.address);
+    decoders[address] = { mailbox, decoder };
     target.addEventListener(type, DOMinion.handleEvent, capture$$1);
   }
-  removeEventDecoder(target, type, decoder, capture$$1) {
+  removeEventDecoder(target, mailbox, type, decoder, capture$$1) {
     const hash = `${type}${capture$$1 ? "!" : "^"}`;
-    delete this.decoders[hash];
+    const decoders = this.decoders[hash];
+    if (decoders != null) {
+      const address = mailbox.address || (mailbox.address = ++this.address);
+      delete decoders[address];
+    }
   }
 }
 
@@ -9899,9 +9914,22 @@ function updateFPS(time) {
   }
 }
 
-const process = Process.spawn("./Main.js", scene);
+const moirView = Process.spawn("./Moir.js", scene);
+const orbitingView = Process.spawn("./Orbiting.js", scene);
+const lemniscateView = Process.spawn("./Leminscate.js", scene);
+
+const select = (first, ...rest) => {
+  let selection = first;
+  for (const process of rest) {
+    if (process.mailbox.length > selection.mailbox.length) {
+      selection = process;
+    }
+  }
+  return selection;
+};
 
 const update = now => {
+  const process = select(moirView, orbitingView, lemniscateView);
   while (process.mailbox.length) {
     process.tick();
   }

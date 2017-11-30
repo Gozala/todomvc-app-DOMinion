@@ -51,16 +51,21 @@
       "flatc --ts src/Format/FlatBuffer/Decoder.fbs/Decoder.fbs && mv Decoder_generated.ts src/Format/FlatBuffer/Decoder.fbs/Decoder.ts",
     "build:schema:JSON":
       "flatc --ts src/Format/FlatBuffer/JSON.fbs/JSON.fbs && mv JSON_generated.ts src/Format/FlatBuffer/JSON.fbs/JSON.ts",
-    "build:todo": "export BUNDLE=todo && rollup -c",
-    "build:triangle": "export BUNDLE=triangle && rollup -c",
-    "build:moir": "export BUNDLE=moir && rollup -c",
+    "build:todo": "rollup -c --worker todo/Main --embed todo/Main",
+    "build:triangle": "rollup -c --worker triangle/Main --embed triangle/Main",
+    "build:moir": "rollup -c --worker moir/Main --embed moir/Main",
+    "build:parallel-moir":
+      "rollup -c --worker parallel-moir/Moir,parallel-moir/Orbiting,parallel-moir/Leminscate --embed parallel-moir/Embed",
     "build":
       "npm run build:todo && npm run build:triangle && npm run build:moir",
     "prepublish": "npm run build && npm test",
     "precommit": "lint-staged",
-    "start:todo": "export BUNDLE=todo && rollup -w -c",
-    "start:triangle": "export BUNDLE=triangle && rollup -w -c",
-    "start:moir": "export BUNDLE=moir && rollup -w -c",
+    "start:todo": "rollup -w -c --worker todo/Main --embed todo/Main",
+    "start:triangle":
+      "rollup -w -c --worker triangle/Main --embed triangle/Main",
+    "start:moir": "rollup -w -c --worker moir/Main --embed moir/Main",
+    "start:parallel-moir":
+      "rollup -c -w --worker parallel-moir/Moir,parallel-moir/Orbiting,parallel-moir/Leminscate --embed parallel-moir/Embed",
     "start":
       "flow-copy-source --watch --verbose src lib & babel --watch --out-dir lib src"
   },

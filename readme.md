@@ -6,6 +6,8 @@ This repository contains several examples in attempt to compare perfomance of
 #### Moir
 
 * [DOMinion](https://gozala.github.io/vs-dominion/DOMinion/moir/)
+* [DOMinion
+  parallel](https://gozala.github.io/vs-dominion/DOMinion/parallel-moir/)
 * [React](https://gozala.github.io/vs-dominion/React/moir/)
 * [Plain](https://gozala.github.io/vs-dominion/Plain/moir/)
 

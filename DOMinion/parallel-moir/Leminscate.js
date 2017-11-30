@@ -1,13 +1,288 @@
-(function(l, i, v, e) { v = l.createElement(i); v.async = 1; v.src = '//' + (location.host || 'localhost').split(':')[0] + ':35729/livereload.js?snipver=1'; e = l.getElementsByTagName(i)[0]; e.parentNode.insertBefore(v, e)})(document, 'script');
 (function () {
 'use strict';
+
+const nodeType = {
+  TEXT_NODE: 3,
+  ELEMENT_NODE: 1,
+  INDEXED_ELEMENT_NODE: 21,
+  TAGGED_ELEMENT_NODE: 22,
+  THUNK_NODE: 23,
+  COMMENT_NODE: 8,
+  DOCUMENT_FRAGMENT_NODE: 11,
+  INDEXED_FRAGMENT_NODE: 24,
+  UNINDEXED_FRAGMENT_NODE: 25
+};
+
+const settingType = {
+  attribute: 1,
+  property: 2,
+  style: 3,
+  listener: 4
+};
+
+class Diff {
+  constructor(buffer, changeLog, address, navigationLog) {
+    this.isError = false;
+
+    Diff.reset(this, buffer, changeLog, address, navigationLog);
+  }
+  static reset(diff, buffer, changeLog, address, navigationLog) {
+    diff.buffer = buffer;
+    diff.changeLog = changeLog;
+    diff.address = address;
+    diff.navigationLog = navigationLog;
+    return diff;
+  }
+  static updateAddress(diff, address) {
+    return Diff.reset(diff, diff.buffer, diff.changeLog, address, diff.navigationLog);
+  }
+  static updateNavigationLog(diff, navigationLog) {
+    return Diff.reset(diff, diff.buffer, diff.changeLog, diff.address, navigationLog);
+  }
+
+  static update(diff, buffer) {
+    return Diff.reset(diff, buffer, diff.changeLog, diff.address, diff.navigationLog);
+  }
+  static navigate(diff) {
+    const { navigationLog, changeLog } = diff;
+    let { buffer } = diff;
+
+    while (navigationLog.length > 0) {
+      let [level, index] = navigationLog.pop();
+
+      if (level < 0) {
+        buffer = changeLog.selectParent(buffer);
+      }
+
+      if (level > 0) {
+        buffer = changeLog.selectChildren(buffer);
+      }
+
+      if (index !== 0) {
+        buffer = changeLog.selectSibling(buffer, index);
+      }
+    }
+
+    return Diff.update(diff, buffer);
+  }
+
+  static selectChildren(diff) {
+    const { navigationLog } = diff;
+    const [level, index] = navigationLog.length === 0 ? [0, 0] : navigationLog[0];
+    switch (level) {
+      case -1:
+        {
+          if (index === 0) {
+            navigationLog.shift();
+          }
+          navigationLog.unshift([1, 0]);
+          break;
+        }
+      case 0:
+        {
+          navigationLog.unshift([1, 0]);
+          break;
+        }
+      default:
+        {
+          navigationLog.unshift([1, 0]);
+          break;
+        }
+    }
+
+    return Diff.updateNavigationLog(diff, navigationLog);
+  }
+  static selectSibling(diff, offset) {
+    const { navigationLog } = diff;
+    const [level, index] = navigationLog.length === 0 ? [0, 0] : navigationLog.shift();
+    navigationLog.unshift([level, index + offset]);
+
+    return Diff.updateNavigationLog(diff, navigationLog);
+  }
+  static selectParent(diff) {
+    const { navigationLog } = diff;
+    const [level, index] = navigationLog.length === 0 ? [0, 0] : navigationLog[0];
+
+    switch (level) {
+      case -1:
+        {
+          navigationLog.unshift([-1, 0]);
+          break;
+        }
+      case 0:
+        {
+          navigationLog.shift();
+          navigationLog.unshift([-1, 0]);
+          break;
+        }
+      default:
+        {
+          navigationLog.shift();
+          break;
+        }
+    }
+
+    return Diff.updateNavigationLog(diff, navigationLog);
+  }
+  static removeNextSibling(diff) {
+    const { changeLog, buffer } = Diff.navigate(diff);
+    return Diff.update(diff, changeLog.removeNextSibling(buffer));
+  }
+
+  static insertText(diff, data) {
+    const { changeLog, buffer } = Diff.navigate(diff);
+    return Diff.update(diff, changeLog.insertText(buffer, data));
+  }
+  static insertComment(diff, data) {
+    const { changeLog, buffer } = Diff.navigate(diff);
+    return Diff.update(diff, changeLog.insertComment(buffer, data));
+  }
+  static insertElement(diff, localName) {
+    const { changeLog, buffer } = Diff.navigate(diff);
+    return Diff.update(diff, changeLog.insertElement(buffer, localName));
+  }
+  static insertElementNS(diff, namespaceURI, localName) {
+    const { changeLog, buffer } = Diff.navigate(diff);
+    return Diff.update(diff, changeLog.insertElementNS(buffer, namespaceURI, localName));
+  }
+  static insertStashedNode(diff, address) {
+    const { changeLog, buffer } = Diff.navigate(diff);
+    return Diff.update(diff, changeLog.insertStashedNode(buffer, address));
+  }
+
+  static replaceWithText(diff, data) {
+    const { changeLog, buffer } = Diff.navigate(diff);
+    return Diff.update(diff, changeLog.replaceWithText(buffer, data));
+  }
+  static replaceWithComment(diff, data) {
+    const { changeLog, buffer } = Diff.navigate(diff);
+    return Diff.update(diff, changeLog.replaceWithComment(buffer, data));
+  }
+  static replaceWithElement(diff, localName) {
+    const { changeLog, buffer } = Diff.navigate(diff);
+    return Diff.update(diff, changeLog.replaceWithElement(buffer, localName));
+  }
+  static replaceWithElementNS(diff, namespaceURI, localName) {
+    const { changeLog, buffer } = Diff.navigate(diff);
+    return Diff.update(diff, changeLog.replaceWithElementNS(buffer, namespaceURI, localName));
+  }
+  static replaceWithStashedNode(diff, address) {
+    const { changeLog, buffer } = Diff.navigate(diff);
+    return Diff.update(diff, changeLog.replaceWithStashedNode(buffer, address));
+  }
+
+  static editTextData(diff, start, end, prefix, suffix) {
+    const { changeLog, buffer } = Diff.navigate(diff);
+    return Diff.update(diff, changeLog.editTextData(buffer, start, end, prefix, suffix));
+  }
+  static setTextData(diff, data) {
+    const { changeLog, buffer } = Diff.navigate(diff);
+    return Diff.update(diff, changeLog.setTextData(buffer, data));
+  }
+  static setAttribute(diff, name, value) {
+    const { changeLog, buffer } = Diff.navigate(diff);
+    return Diff.update(diff, changeLog.setAttribute(buffer, name, value));
+  }
+  static removeAttribute(diff, name) {
+    const { changeLog, buffer } = Diff.navigate(diff);
+    return Diff.update(diff, changeLog.removeAttribute(buffer, name));
+  }
+  static setAttributeNS(diff, namespaceURI, name, value) {
+    const { changeLog, buffer } = Diff.navigate(diff);
+    return Diff.update(diff, changeLog.setAttributeNS(buffer, namespaceURI, name, value));
+  }
+  static removeAttributeNS(diff, namespaceURI, name) {
+    const { changeLog, buffer } = Diff.navigate(diff);
+    return Diff.update(diff, changeLog.removeAttributeNS(buffer, namespaceURI, name));
+  }
+  static assignProperty(diff, name, value) {
+    const { changeLog, buffer } = Diff.navigate(diff);
+    return Diff.update(diff, changeLog.assignProperty(buffer, name, value));
+  }
+  static deleteProperty(diff, name) {
+    const { changeLog, buffer } = Diff.navigate(diff);
+    return Diff.update(diff, changeLog.deleteProperty(buffer, name));
+  }
+  static setStyleRule(diff, name, value) {
+    const { changeLog, buffer } = Diff.navigate(diff);
+    return Diff.update(diff, changeLog.setStyleRule(buffer, name, value));
+  }
+  static removeStyleRule(diff, name) {
+    const { changeLog, buffer } = Diff.navigate(diff);
+    return Diff.update(diff, changeLog.removeStyleRule(buffer, name));
+  }
+  static addEventDecoder(diff, type, decoder, capture) {
+    const { changeLog, buffer } = Diff.navigate(diff);
+    return Diff.update(diff, changeLog.addEventDecoder(buffer, type, decoder, capture));
+  }
+  static removeEventDecoder(diff, type, decoder, capture) {
+    const { changeLog, buffer } = Diff.navigate(diff);
+    return Diff.update(diff, changeLog.removeEventDecoder(buffer, type, decoder, capture));
+  }
+  static shiftSiblings(diff, count) {
+    const { changeLog, buffer } = Diff.navigate(diff);
+    return Diff.update(diff, changeLog.shiftSiblings(buffer, count));
+  }
+  static stashNextSibling(diff, address) {
+    const next = Diff.navigate(Diff.updateAddress(diff, address + 1));
+    return Diff.update(next, next.changeLog.stashNextSibling(next.buffer, address));
+  }
+  static discardStashedNode(diff, address) {
+    // We don't do not encode navigation as it's not really necessary to discard
+    // nodes.
+    const { changeLog, buffer } = diff;
+    return Diff.update(diff, changeLog.discardStashedNode(buffer, address));
+  }
+}
 
 const unreachable = value => {
   const format = JSON.stringify(value);
   throw new TypeError(`Internal error: Encountered impossible value: ${format}`);
 };
 
+class EmptyList {
+  constructor() {
+    this.length = 0;
+    this.isEmpty = true;
+  }
+
+  toArray() {
+    return nil;
+  }
+  push(head) {
+    return new LinkedList(head, this);
+  }
+}
+
+class LinkedList {
+  constructor(head, tail) {
+    this.isEmpty = false;
+
+    this.head = head;
+    this.tail = tail;
+    this.length = this.tail.length + 1;
+  }
+  push(head) {
+    return new LinkedList(head, this);
+  }
+  toArray() {
+    const array = [];
+    let node = this;
+    while (node.isEmpty === false) {
+      array.push(node.head);
+      node = node.tail;
+    }
+    return array;
+  }
+}
+
 const nil = Object.freeze([]);
+const emptyList = new EmptyList();
+
+const empty$2 = () => emptyList;
+
+const Retain = "Retain";
+const Delete = "Delete";
 
 // We don't want to copy arrays all the time, aren't mutating lists, and
 // only need O(1) prepend and length, we can get away with a custom singly
@@ -16,107 +291,716 @@ const nil = Object.freeze([]);
 // Abstract out the table in case I want to edit the implementation to
 // arrays of arrays or something.
 
+class Table {
+  constructor() {
+    this.cells = Object.create(null);
+    this.last = Object.create(null);
+    this.next = Object.create(null);
+  }
+  static init(last, next) {
+    const table = new this();
+    let n = last.length;
+    let m = next.length;
+    let i = 0;
+    let j = 0;
+
+    table.put(i, j, new Cell(empty$2()));
+
+    for (i = 1; i <= m; i += 1) {
+      const [key, node] = next[i - 1];
+      table.next[key] = node;
+      table.put(i, 0, table.get(i - 1, 0).insert(key));
+    }
+
+    for (j = 1; j <= n; j += 1) {
+      const [key, node] = last[j - 1];
+      table.last[key] = j - 1;
+      table.put(0, j, table.get(0, j - 1).delete(key));
+    }
+
+    return table;
+  }
+  static create(last, next) {
+    const n = last.length;
+    const m = next.length;
+
+    let table = Table.init(last, next);
+    let i = 0;
+    let j = 0;
+
+    for (i = 1; i <= m; i += 1) {
+      for (j = 1; j <= n; j += 1) {
+        table = chooseCell(table, i, j, last, next, (direction, table, edits, last, next) => {
+          switch (direction) {
+            case "Left":
+              {
+                return table.put(i, j, edits.insert(next[i - 1][0]));
+              }
+            case "Up":
+              {
+                return table.put(i, j, edits.delete(last[j - 1][0]));
+              }
+            case "Diagonal":
+              {
+                if (last[j - 1][0] === next[i - 1][0]) {
+                  return table.put(i, j, edits.retain(last[j - 1][0]));
+                } else {
+                  return table.put(i, j, edits.delete(last[j - 1][0]).insert(next[i - 1][0]));
+                }
+              }
+            default:
+              return unreachable(direction);
+          }
+        });
+      }
+    }
+
+    return table;
+  }
+  put(x, y, cell) {
+    this.cells[`${x},${y}`] = cell;
+    return this;
+  }
+  get(x, y) {
+    const cell = this.cells[`${x},${y}`];
+    if (cell) {
+      return cell;
+    } else {
+      return this.cells[`${x},${y}`] = new Cell(empty$2());
+    }
+  }
+}
+
+class Cell {
+  constructor(edits) {
+    this.edits = edits;
+    this.length = edits.length;
+  }
+  insert(key) {
+    return new Cell(this.edits.push(key));
+  }
+  delete(key) {
+    return new Cell(this.edits.push(Delete));
+  }
+  retain(key) {
+    const { edits } = this;
+    return new Cell(edits.push(Retain));
+  }
+  toArray() {
+    return this.edits.toArray().reverse();
+  }
+}
+
+const chooseCell = (table, x, y, last, next, edit) => {
+  let edits = table.get(x, y - 1);
+  let min = edits.length;
+  let direction = "Up";
+
+  if (table.get(x - 1, y).length < min) {
+    edits = table.get(x - 1, y);
+    min = edits.length;
+    direction = "Left";
+  }
+
+  if (table.get(x - 1, y - 1).length < min) {
+    edits = table.get(x - 1, y - 1);
+    min = edits.length;
+    direction = "Diagonal";
+  }
+
+  return edit(direction, table, edits, last, next);
+};
+
+// Constructor for operations (which are a stream of edits). Uses
+// variation of Levenshtein Distance.
+
 const empty$1 = Object.freeze([]);
 const blank$1 = Object.freeze(Object.create(null));
 
-const patch = (archive, changeList) => archive.patch(changeList);
+class Changes {
+  constructor(last, next) {
+    this.last = last;
+    this.next = next;
+  }
+  encode(changeLog, init) {
+    return diffNode(this.last, this.next, new Diff(init, changeLog, 1, [])).buffer;
+  }
+}
+
+const diff = (last, next) => new Changes(last, next);
+
+const removeFragment = (node, log) => {
+  const { children } = node;
+  let index = 0;
+  while (index >= 0) {
+    const child = children[index];
+    if (child == null) {
+      index = -1;
+    } else {
+      index++;
+      log = Diff.removeNextSibling(log);
+    }
+  }
+  return log;
+};
+
+const insertText = (node, log) => Diff.insertText(log, node.data);
+
+const insertComment = (node, log) => Diff.insertComment(log, node.data);
+
+const insertElementNode = (node, log) => {
+  const { localName, namespaceURI } = node;
+  const out = namespaceURI == null ? Diff.insertElement(log, localName) : Diff.insertElementNS(log, namespaceURI, localName);
+  return out;
+};
+
+const insertIndexedElement = (node, log) => Diff.selectSibling(populateIndexedElement(node, setSettings$1(node, Diff.selectSibling(insertElementNode(node, log), 1))), -1);
+
+const insertUnindexedElement = (node, log) => Diff.selectSibling(populateUnindexedElement(node, setSettings$1(node, Diff.selectSibling(insertElementNode(node, log), 1))), -1);
+
+const populateIndexedElement = (node, log) => Diff.selectParent(insertIndexedChildren(node.children, Diff.selectChildren(log)));
+
+const populateUnindexedElement = (node, log) => Diff.selectParent(insertUnindexedChildren(node.children, Diff.selectChildren(log)));
+
+const insertIndexedFragment = (node, log) => insertIndexedChildren(node.children, log);
+
+const insertUnindexedFragment = (node, log) => insertUnindexedChildren(node.children, log);
+
+const insertIndexedChildren = (children, log) => diffIndexedChildren(empty$1, children, log);
+
+const insertUnindexedChildren = (children, log) => diffUnindexedChildren(empty$1, children, log);
+
+const insertThunk = (thunk, log) => insertNode(thunk.force(), log);
+
+const insertTagged = (tagged, log) => insertNode(tagged.node, log);
+
+const replaceWithText = (node, log) => Diff.replaceWithText(log, node.data);
+
+const replaceWithComment = (node, log) => Diff.replaceWithComment(log, node.data);
+
+const replaceWithElementNode = (node, log) => {
+  const { localName, namespaceURI } = node;
+  const out = namespaceURI == null ? Diff.replaceWithElement(log, localName) : Diff.replaceWithElementNS(log, namespaceURI, localName);
+  return out;
+};
+
+const replaceWithUnindexedElement = (node, log) => populateUnindexedElement(node, setSettings$1(node, replaceWithElementNode(node, log)));
+
+const replaceWithIndexedElement = (node, log) => populateIndexedElement(node, setSettings$1(node, replaceWithElementNode(node, log)));
+
+const replaceWithThunk = (thunk, log) => replaceWithNode(thunk.force(), log);
+
+const replaceWithTagged = (tagged, log) => replaceWithNode(tagged.node, log);
+
+const replaceWithIndexedFragment = (node, log) => insertIndexedFragment(node, Diff.removeNextSibling(Diff.selectSibling(log, -1)));
+
+const replaceWithUnindexedFragment = (node, log) => insertUnindexedFragment(node, Diff.removeNextSibling(Diff.selectSibling(log, -1)));
+
+const replaceWithNode = (node, log) => {
+  switch (node.nodeType) {
+    case nodeType.TEXT_NODE:
+      {
+        return replaceWithText(node, log);
+      }
+    case nodeType.COMMENT_NODE:
+      {
+        return replaceWithComment(node, log);
+      }
+    case nodeType.ELEMENT_NODE:
+      {
+        return replaceWithUnindexedElement(node, log);
+      }
+    case nodeType.INDEXED_ELEMENT_NODE:
+      {
+        return replaceWithIndexedElement(node, log);
+      }
+    case nodeType.THUNK_NODE:
+      {
+        return replaceWithThunk(node, log);
+      }
+    case nodeType.TAGGED_ELEMENT_NODE:
+      {
+        return replaceWithTagged(node, log);
+      }
+    case nodeType.INDEXED_FRAGMENT_NODE:
+      {
+        return replaceWithIndexedFragment(node, log);
+      }
+    case nodeType.UNINDEXED_FRAGMENT_NODE:
+      {
+        return replaceWithUnindexedFragment(node, log);
+      }
+    default:
+      {
+        return unreachable(node);
+      }
+  }
+};
+
+const insertNode = (node, log) => {
+  switch (node.nodeType) {
+    case nodeType.TEXT_NODE:
+      {
+        return Diff.insertText(log, node.data);
+      }
+    case nodeType.COMMENT_NODE:
+      {
+        return Diff.insertComment(log, node.data);
+      }
+    case nodeType.ELEMENT_NODE:
+      {
+        return insertUnindexedElement(node, log);
+      }
+    case nodeType.INDEXED_ELEMENT_NODE:
+      {
+        return insertIndexedElement(node, log);
+      }
+    case nodeType.THUNK_NODE:
+      {
+        return insertThunk(node, log);
+      }
+    case nodeType.TAGGED_ELEMENT_NODE:
+      {
+        return insertTagged(node, log);
+      }
+    case nodeType.INDEXED_FRAGMENT_NODE:
+      {
+        return insertIndexedFragment(node, log);
+      }
+    case nodeType.UNINDEXED_FRAGMENT_NODE:
+      {
+        return insertUnindexedFragment(node, log);
+      }
+    default:
+      {
+        return unreachable(node);
+      }
+  }
+};
+
+const diffThunk = (last, next, log) => {
+  const { args: lastArgs, render: lastRender } = last;
+  const { args: nextArgs, render: nextRender } = next;
+  const equal = lastRender === nextRender && lastArgs.length === nextArgs.length && lastArgs[0] === nextArgs[0] && lastArgs[1] === nextArgs[1] && lastArgs[2] === nextArgs[2] && lastArgs[3] === nextArgs[3] && lastArgs[4] === nextArgs[4] && lastArgs[5] === nextArgs[5] && lastArgs[6] === nextArgs[6] && lastArgs[7] === nextArgs[7] && lastArgs[8] === nextArgs[8];
+
+  if (equal) {
+    next.node = last.node;
+    return log;
+  } else {
+    return diffNode(last.force(), next.force(), log);
+  }
+};
+
+const diffTagged = (last, next, log) => {
+  return diffNode(last.node, next.node, log);
+};
+
+const diffNode = (last, next, log) => {
+  if (last === next) {
+    return log;
+  } else {
+    switch (next.nodeType) {
+      case nodeType.TEXT_NODE:
+        {
+          switch (last.nodeType) {
+            case nodeType.TEXT_NODE:
+              return diffText(last, next, log);
+            case nodeType.INDEXED_FRAGMENT_NODE:
+              return insertText(next, removeFragment(last, log));
+            case nodeType.UNINDEXED_FRAGMENT_NODE:
+              return insertText(next, removeFragment(last, log));
+            default:
+              return replaceWithText(next, log);
+          }
+        }
+      case nodeType.COMMENT_NODE:
+        {
+          switch (last.nodeType) {
+            case nodeType.COMMENT_NODE:
+              return diffComment(last, next, log);
+            case nodeType.INDEXED_FRAGMENT_NODE:
+              return insertComment(next, removeFragment(last, log));
+            case nodeType.UNINDEXED_FRAGMENT_NODE:
+              return insertComment(next, removeFragment(last, log));
+            default:
+              return replaceWithComment(next, log);
+          }
+        }
+      case nodeType.ELEMENT_NODE:
+        {
+          switch (last.nodeType) {
+            case nodeType.ELEMENT_NODE:
+              return diffUnindexedElement(last, next, log);
+            case nodeType.INDEXED_FRAGMENT_NODE:
+              return insertUnindexedElement(next, removeFragment(last, log));
+            case nodeType.UNINDEXED_FRAGMENT_NODE:
+              return insertUnindexedElement(next, removeFragment(last, log));
+            default:
+              return replaceWithUnindexedElement(next, log);
+          }
+        }
+      case nodeType.INDEXED_ELEMENT_NODE:
+        {
+          switch (last.nodeType) {
+            case nodeType.INDEXED_ELEMENT_NODE:
+              return diffIndexedElement(last, next, log);
+            case nodeType.INDEXED_FRAGMENT_NODE:
+              return insertIndexedElement(next, removeFragment(last, log));
+            case nodeType.UNINDEXED_FRAGMENT_NODE:
+              return insertIndexedElement(next, removeFragment(last, log));
+            default:
+              return replaceWithIndexedElement(next, log);
+          }
+        }
+      case nodeType.THUNK_NODE:
+        {
+          switch (last.nodeType) {
+            case nodeType.THUNK_NODE:
+              return diffThunk(last, next, log);
+            case nodeType.INDEXED_FRAGMENT_NODE:
+              return insertThunk(next, removeFragment(last, log));
+            case nodeType.UNINDEXED_FRAGMENT_NODE:
+              return insertThunk(next, removeFragment(last, log));
+            default:
+              return replaceWithThunk(next, log);
+          }
+        }
+      case nodeType.TAGGED_ELEMENT_NODE:
+        {
+          switch (last.nodeType) {
+            case nodeType.TAGGED_ELEMENT_NODE:
+              return diffTagged(last, next, log);
+            case nodeType.INDEXED_FRAGMENT_NODE:
+              return insertTagged(next, removeFragment(last, log));
+            case nodeType.UNINDEXED_FRAGMENT_NODE:
+              return insertTagged(next, removeFragment(last, log));
+            default:
+              return replaceWithTagged(next, log);
+          }
+        }
+      case nodeType.INDEXED_FRAGMENT_NODE:
+        {
+          switch (last.nodeType) {
+            case nodeType.INDEXED_FRAGMENT_NODE:
+              return diffIndexedFragment(last, next, log);
+            case nodeType.UNINDEXED_FRAGMENT_NODE:
+              return insertIndexedFragment(next, removeFragment(last, log));
+            default:
+              return replaceWithIndexedFragment(next, log);
+          }
+        }
+      case nodeType.UNINDEXED_FRAGMENT_NODE:
+        {
+          switch (last.nodeType) {
+            case nodeType.UNINDEXED_FRAGMENT_NODE:
+              return diffUnindexedFragment(last, next, log);
+            case nodeType.INDEXED_FRAGMENT_NODE:
+              return insertUnindexedFragment(next, removeFragment(last, log));
+            default:
+              return replaceWithUnindexedFragment(next, log);
+          }
+        }
+      default:
+        {
+          return unreachable(next);
+        }
+    }
+  }
+};
+
+const diffText = (last, next, log) => {
+  if (last == null) {
+    return insertText(next, log);
+  } else if (last.data === next.data) {
+    return log;
+  } else {
+    return diffTextData(last.data, next.data, log);
+  }
+};
+
+const diffComment = (last, next, log) => {
+  if (last == null) {
+    return insertComment(next, log);
+  } else if (last.data === next.data) {
+    return log;
+  } else {
+    return diffTextData(last.data, next.data, log);
+  }
+};
+
+const diffTextData = (last, next, log) => {
+  const nextLength = next.length;
+  const lastLength = last.length;
+  if (nextLength <= 6) {
+    return Diff.setTextData(log, next);
+  } else if (lastLength > nextLength) {
+    const index = last.indexOf(next);
+    if (index === -1) {
+      return Diff.setTextData(log, next);
+    } else {
+      return Diff.editTextData(log, index, lastLength - index - nextLength, "", "");
+    }
+  } else {
+    const index = next.indexOf(last);
+    if (index === -1) {
+      return Diff.setTextData(log, next);
+    } else {
+      return Diff.editTextData(log, 0, 0, next.substr(0, index), next.substr(index + last.length));
+    }
+  }
+};
+
+const diffUnindexedElement = (last, next, log) => {
+  if (next.localName === last.localName && next.namespaceURI === last.namespaceURI) {
+    return Diff.selectParent(diffUnindexedChildren(last.children, next.children, Diff.selectChildren(diffSettings(last, next, log))));
+  } else {
+    return replaceWithUnindexedElement(next, log);
+  }
+};
+
+const diffUnindexedFragment = (last, next, log) => diffUnindexedChildren(last.children, next.children, log);
+
+const diffUnindexedChildren = (last, next, log) => {
+  let index = 0;
+  while (index >= 0) {
+    const lastChild = last[index];
+    const nextChild = next[index];
+
+    // If last and next versions contain a child for the given index, just
+    // diff them and move on.
+    if (lastChild != null && nextChild != null) {
+      log = diffNode(lastChild, nextChild, Diff.selectSibling(log, 1));
+      index += 1;
+      // If child is present in next version but not in the last version
+      // insert it and select it.
+    } else if (nextChild != null) {
+      log = Diff.selectSibling(insertNode(nextChild, log), 1);
+      index += 1;
+      // If child is present in last version but isn't present in new version
+      // remove child
+    } else if (lastChild != null) {
+      log = Diff.removeNextSibling(log);
+      index += 1;
+    } else {
+      index = -1;
+    }
+  }
+
+  return log;
+};
+
+const diffIndexedElement = (last, next, log) => {
+  if (next.localName === last.localName && next.namespaceURI === next.namespaceURI) {
+    return Diff.selectParent(diffIndexedChildren(last.children, next.children, Diff.selectChildren(diffSettings(last, next, log))));
+  } else {
+    return replaceWithIndexedElement(next, log);
+  }
+};
+
+const diffIndexedFragment = (last, next, log) => diffIndexedChildren(last.children, next.children, log);
+
+const diffIndexedChildren = (last, next, diff) => {
+  const table = Table.create(last, next);
+  const edits = table.get(next.length, last.length).toArray();
+  const stash = {};
+  const shifted = {};
+
+  let index = 0;
+  for (let edit of edits) {
+    switch (edit) {
+      case Delete:
+        {
+          const key = last[index][0];
+          if (table.next[key] == null) {
+            diff == Diff.removeNextSibling(diff);
+          } else if (shifted[key] == null) {
+            stash[key] = diff.address;
+            diff = Diff.stashNextSibling(diff, diff.address);
+          }
+          index++;
+          break;
+        }
+      case Retain:
+        {
+          const [key, node] = last[index];
+          diff = diffNode(node, table.next[key], Diff.selectSibling(diff, 1));
+          index++;
+          break;
+        }
+      default:
+        {
+          const key = edit;
+          if (table.last[key] == null) {
+            diff = insertNode(table.next[key], diff);
+            diff = Diff.selectSibling(diff, 1);
+          } else {
+            if (stash[key] == null) {
+              shifted[key] = true;
+              diff = Diff.shiftSiblings(diff, table.last[key] - index);
+              diff = Diff.selectSibling(diff, 1);
+            } else {
+              diff = Diff.insertStashedNode(diff, stash[key]);
+              diff = Diff.selectSibling(diff, 1);
+            }
+          }
+        }
+    }
+  }
+
+  return diff;
+};
+
+const setSettings$1 = (node, log) => {
+  const v1 = log;
+  const v2 = diffProperties(blank$1, node.properties, v1);
+  const v3 = diffAttributes(blank$1, node.attributes, v2);
+  const v4 = diffStyle(blank$1, node.style, v3);
+  const v5 = diffListeners(blank$1, node.listeners, v4);
+  return v5;
+};
+
+const diffSettings = (last, next, log) => {
+  const v1 = log;
+  const v2 = diffProperties(last.properties, next.properties, v1);
+  const v3 = diffAttributes(last.attributes, next.attributes, v2);
+  const v4 = diffStyle(last.style, next.style, v3);
+  const v5 = diffListeners(last.listeners, next.listeners, v4);
+  return v5;
+};
+
+const diffProperties = (last, next, log) => {
+  for (let name in last) {
+    if (!(name in next)) {
+      log = Diff.deleteProperty(log, name);
+    }
+  }
+
+  for (let name in next) {
+    const value = next[name];
+    if (last[name] !== value) {
+      if (value === undefined) {
+        log = Diff.deleteProperty(log, name);
+      } else {
+        log = Diff.assignProperty(log, name, value);
+      }
+    }
+  }
+
+  return log;
+};
+
+const diffAttributes = (last, next, log) => {
+  for (let key in last) {
+    if (!(key in next)) {
+      const attribute = last[key];
+      if (attribute != null) {
+        const { name, namespaceURI } = attribute;
+        if (namespaceURI == null) {
+          log = Diff.removeAttribute(log, name);
+        } else {
+          log = Diff.removeAttributeNS(log, namespaceURI, name);
+        }
+      }
+    }
+  }
+
+  for (let key in next) {
+    const attribute = next[key];
+    if (attribute != null) {
+      const { namespaceURI, name, value } = attribute;
+      const x = last[key];
+      if (x == null || x.value !== value) {
+        if (namespaceURI == null) {
+          if (value == null) {
+            log = Diff.removeAttribute(log, name);
+          } else {
+            log = Diff.setAttribute(log, name, value);
+          }
+        } else {
+          if (value == null) {
+            log = Diff.removeAttributeNS(log, namespaceURI, name);
+          } else {
+            log = Diff.setAttributeNS(log, namespaceURI, name, value);
+          }
+        }
+      }
+    }
+  }
+
+  return log;
+};
+
+const diffStyle = (last, next, log) => {
+  for (let name in last) {
+    if (name !== "settingType") {
+      if (!(name in next) && last[name] != null) {
+        log = Diff.removeStyleRule(log, name);
+      }
+    }
+  }
+
+  for (let name in next) {
+    if (name != "settingType") {
+      const value = next[name];
+      const lastValue = last[name];
+      if (lastValue !== value) {
+        if (value == null) {
+          if (lastValue != null) {
+            log = Diff.removeStyleRule(log, name);
+          }
+        } else {
+          log = Diff.setStyleRule(log, name, value);
+        }
+      }
+    }
+  }
+
+  return log;
+};
+
+const isEqualListeners = (last, next) => {
+  return last.type === next.type && last.capture === next.capture && JSON.stringify(last.decoder) === JSON.stringify(next.decoder);
+};
+
+const diffListeners = (last, next, log) => {
+  for (let name in last) {
+    if (!(name in next)) {
+      const listener = last[name];
+      if (listener) {
+        const { type, capture, decoder } = listener;
+        log = Diff.removeEventDecoder(log, type, decoder, capture);
+      }
+    }
+  }
+
+  for (let name in next) {
+    const nextListener = next[name];
+    const lastListener = last[name];
+
+    const [remove, add] = lastListener && !nextListener ? [lastListener, null] : !lastListener && nextListener ? [null, nextListener] : lastListener && nextListener && isEqualListeners(lastListener, nextListener) ? [null, null] : [lastListener, nextListener];
+
+    if (remove) {
+      const { type, capture, decoder } = remove;
+      log = Diff.removeEventDecoder(log, type, decoder, capture);
+    }
+    if (add) {
+      const { type, capture, decoder } = add;
+      log = Diff.addEventDecoder(log, type, decoder, capture);
+    }
+  }
+
+  return log;
+};
 
 /**
  * Represents succeeded result and contains result `value`.
  * @param a type of the `value` for this result.
  */
-class Ok {
-  /**
-   * @param value Success value of this result.
-   */
-
-  /**
-   * Sentinel property for diferentitating between `Ok` and `Error` results.
-   */
-  constructor(value) {
-    this.isOk = true;
-
-    this.value = value;
-  }
-  map(f) {
-    return new Ok(f(this.value));
-  }
-  format(f) {
-    return this;
-  }
-  chain(next) {
-    return next(this.value);
-  }
-  capture(next) {
-    return this;
-  }
-  recover(f) {
-    return this;
-  }
-  and(result) {
-    return result;
-  }
-  or(result) {
-    return this;
-  }
-  toValue(fallback) {
-    return this.value;
-  }
-  toMaybe() {
-    return this.value;
-  }
-}
-
-class Error$1 {
-  /**
-   * @param error Error value of this result.
-   */
-
-  /**
-   * Sentinel property for diferentitating between `Ok` and `Error` results.
-   */
-  constructor(error) {
-    this.isOk = false;
-
-    this.error = error;
-  }
-  map(f) {
-    return this;
-  }
-  format(f) {
-    return new Error$1(f(this.error));
-  }
-  chain(next) {
-    return this;
-  }
-  capture(next) {
-    return next(this.error);
-  }
-  recover(f) {
-    return new Ok(f(this.error));
-  }
-  and(result) {
-    return this;
-  }
-  or(result) {
-    return result;
-  }
-  toValue(fallback) {
-    return fallback;
-  }
-  toMaybe() {
-    return null;
-  }
-}
 
 /**
  * Library for representing the `Result` of a computation that may fail. Which
  * is a more type friendly way to handle errors than exceptions.
  */
-
-const ok = value => new Ok(value);
-
-const error = error => new Error$1(error);
 
 const anArticle = /^(a|e[^u]|i|o|u)/i;
 
@@ -856,14 +1740,7 @@ class Maybe {
  * contains `Decoder.Error` if value can't be decoded with a given decoder or
  * a `Result.Ok<a>`.
  */
-const decode = (decoder, json) => {
-  const value = decode$1(decoder, json);
-  if (value instanceof Error$2) {
-    return error(value);
-  } else {
-    return ok(value);
-  }
-};
+
 
 const String$1 = new String$2();
 
@@ -879,7 +1756,7 @@ const error$1 = reason => new Error$2(reason);
 
 const field = (name, decoder) => new Field(name, decoder);
 
-
+const at = (path, decoder) => path.reduceRight((decoder, name) => field(name, decoder), decoder);
 
 const index = (index, decoder) => new Index(index, decoder);
 
@@ -910,360 +1787,6 @@ const avoid = value => new Undefined(value);
 const match = value => new Match(value);
 
 const empty$3 = Object.freeze([]);
-
-const ELEMENT_NODE = 1;
-const TEXT_NODE = 3;
-const COMMENT_NODE = 8;
-
-const insertNode$1 = (target, childrenSelected, node) => {
-  if (childrenSelected) {
-    return target.insertBefore(node, target.firstChild);
-  } else {
-    const parent = target.parentNode;
-    if (parent == null) {
-      throw Error("Inavalid state. Unable to add a sibling to an orphand node");
-    }
-
-    return parent.insertBefore(node, target.nextSibling);
-  }
-};
-
-const removeNode = target => {
-  const parent = target.parentNode;
-  if (parent == null) {
-    throw Error("Unable to remove orphand node");
-  } else {
-    return parent.removeChild(target);
-  }
-};
-
-const replaceNode = (state, node) => {
-  if (state.childrenSelected) {
-    throw Error("Invalid state. Unable to replace node when children are seleted");
-  }
-  const parent = state.target.parentNode;
-  if (parent == null) {
-    throw Error("Ivarid state. Unable to replace an orphand node");
-  }
-
-  parent.replaceChild(node, state.target);
-  state.target = node;
-  return state;
-};
-
-const getTextDataUpdateTarget = (selectChildren, target) => {
-  if (selectChildren) {
-    throw Error("Unable to edit text data when children are selected");
-  }
-  switch (target.nodeType) {
-    case TEXT_NODE:
-      return target;
-    case COMMENT_NODE:
-      {
-        return target;
-      }
-    default:
-      {
-        throw Error("Unable to edit text data as neither Text nor Comment node is selected");
-      }
-  }
-};
-
-const getUpdateTargetElement = (selectChildren, target) => {
-  if (selectChildren) {
-    throw new Error("Unable to update node when children are selected.");
-  } else if (target.nodeType === ELEMENT_NODE) {
-    return target;
-  } else {
-    throw new Error("Unable to update element when text or comment node is selected");
-  }
-};
-
-const getTargetStyle = (selectChildren, target) => {
-  if (selectChildren) {
-    throw new Error("Unable to update node when children are selected.");
-  } else if (target.style) {
-    return target.style;
-  } else {
-    throw new Error("Target node does not support styling");
-  }
-};
-
-const getStashedNode = (stash, address) => {
-  const node = stash[address];
-  if (node == null) {
-    throw Error(`Unable to find stashed node with address #${address}`);
-  } else {
-    return node;
-  }
-};
-
-class DOMPatch {
-  reset(target, childrenSelected, stash, mailbox) {
-    this.target = target;
-    this.childrenSelected = childrenSelected;
-    this.stash = stash;
-    this.mailbox = mailbox;
-  }
-
-  static selectChildren(state) {
-    if (state.childrenSelected) {
-      throw Error("Inavlid state: Unable to select children as they are already selected");
-    } else {
-      state.childrenSelected = true;
-      return state;
-    }
-  }
-  static selectSibling(state, offset) {
-    const { target, childrenSelected } = state;
-    let select = null;
-    if (childrenSelected) {
-      state.childrenSelected = false;
-      select = target.childNodes[offset - 1];
-    } else {
-      select = target;
-      while (select && offset--) {
-        select = select.nextSibling;
-      }
-    }
-
-    if (select == null) {
-      throw Error("sibling selection has failed, sibling being selected does not exist");
-    } else {
-      state.target = select;
-      state.childrenSelected = false;
-      return state;
-    }
-  }
-  static selectParent(state) {
-    if (state.childrenSelected) {
-      state.childrenSelected = false;
-      return state;
-    } else {
-      const target = state.target.parentNode;
-      if (target == null) {
-        throw Error("Can not select parent of orphand node");
-      } else {
-        state.target = target;
-        return state;
-      }
-    }
-  }
-  static removeNextSibling(state) {
-    const { childrenSelected, target } = state;
-    const [parent, next] = childrenSelected ? [target, target.firstChild] : [target.parentNode, target.nextSibling];
-
-    if (next == null) {
-      throw Error("Can not remove next sibling as it does not exist");
-    } else if (parent == null) {
-      throw Error("Can not remove next sibling as it has not parent");
-    } else {
-      parent.removeChild(next);
-      return state;
-    }
-  }
-
-  static insertText(state, data) {
-    insertNode$1(state.target, state.childrenSelected, state.target.ownerDocument.createTextNode(data));
-    return state;
-  }
-  static insertComment(state, data) {
-    insertNode$1(state.target, state.childrenSelected, state.target.ownerDocument.createComment(data));
-    return state;
-  }
-  static insertElement(state, localName) {
-    insertNode$1(state.target, state.childrenSelected, state.target.ownerDocument.createElement(localName));
-    return state;
-  }
-  static insertElementNS(state, namespaceURI, localName) {
-    insertNode$1(state.target, state.childrenSelected, state.target.ownerDocument.createElementNS(namespaceURI, localName));
-    return state;
-  }
-  static insertStashedNode(state, address) {
-    insertNode$1(state.target, state.childrenSelected, getStashedNode(state.stash, address));
-    return state;
-  }
-
-  static replaceWithText(state, data) {
-    return replaceNode(state, state.target.ownerDocument.createTextNode(data));
-  }
-  static replaceWithComment(state, data) {
-    return replaceNode(state, state.target.ownerDocument.createComment(data));
-  }
-  static replaceWithElement(state, localName) {
-    return replaceNode(state, state.target.ownerDocument.createElement(localName));
-  }
-  static replaceWithElementNS(state, namespaceURI, localName) {
-    return replaceNode(state, state.target.ownerDocument.createElementNS(namespaceURI, localName));
-  }
-  static replaceWithStashedNode(state, address) {
-    const node = state.stash[address];
-    if (node == null) {
-      throw Error(`Unable to find stashed node with address #${address}`);
-    }
-    return replaceNode(state, node);
-  }
-
-  static editTextData(state, start, end, prefix, suffix) {
-    const node = getTextDataUpdateTarget(state.childrenSelected, state.target);
-    const { data } = node;
-    const content = data.substring(start, data.length - end);
-    node.data = `${prefix}${content}${suffix}`;
-    return state;
-  }
-  static setTextData(state, data) {
-    const node = getTextDataUpdateTarget(state.childrenSelected, state.target);
-    node.data = data;
-    return state;
-  }
-  static setAttribute(state, name, value) {
-    const node = getUpdateTargetElement(state.childrenSelected, state.target);
-    node.setAttribute(name, value);
-    return state;
-  }
-  static removeAttribute(state, name) {
-    const node = getUpdateTargetElement(state.childrenSelected, state.target);
-    node.removeAttribute(name);
-    return state;
-  }
-  static setAttributeNS(state, namespaceURI, name, value) {
-    const node = getUpdateTargetElement(state.childrenSelected, state.target);
-    node.setAttributeNS(namespaceURI, name, value);
-    return state;
-  }
-  static removeAttributeNS(state, namespaceURI, name) {
-    const node = getUpdateTargetElement(state.childrenSelected, state.target);
-    node.removeAttributeNS(namespaceURI, name);
-    return state;
-  }
-  static assignProperty(state, name, value) {
-    const node = getUpdateTargetElement(state.childrenSelected, state.target);
-    node[name] = value;
-    return state;
-  }
-  static deleteProperty(state, name) {
-    const node = getUpdateTargetElement(state.childrenSelected, state.target);
-    delete node[name];
-    return state;
-  }
-  static setStyleRule(state, name, value) {
-    const style = getTargetStyle(state.childrenSelected, state.target);
-    style[name] = value;
-    return state;
-  }
-  static removeStyleRule(state, name) {
-    const style = getTargetStyle(state.childrenSelected, state.target);
-    style[name] = "";
-    return state;
-  }
-  static addEventDecoder(state, type, decoder, capture$$1) {
-    const node = getUpdateTargetElement(state.childrenSelected, state.target);
-    const host = node.DOMinion || (node.DOMinion = new DOMinion(state.mailbox));
-    host.addEventDecoder(node, type, decoder, capture$$1);
-    return state;
-  }
-  static removeEventDecoder(state, type, decoder, capture$$1) {
-    const node = getUpdateTargetElement(state.childrenSelected, state.target);
-    const host = node.DOMinion || (node.DOMinion = new DOMinion(state.mailbox));
-    host.removeEventDecoder(node, type, decoder, capture$$1);
-    return state;
-  }
-
-  static stashNextSibling(state, address) {
-    const next = state.childrenSelected ? state.target.firstChild : state.target.nextSibling;
-
-    if (next == null) {
-      throw Error("Unable to stash next sibling as there is not one");
-    } else {
-      state.stash[address] = next;
-      removeNode(next);
-      return state;
-    }
-  }
-  static discardStashedNode(state, address) {
-    delete state.stash[address];
-    return state;
-  }
-
-  static shiftSiblings(state, count) {
-    const { target, childrenSelected } = state;
-    let select = null;
-    if (childrenSelected) {
-      select = target.childNodes[count];
-    } else {
-      let offset = count;
-      select = target.nextSibling;
-      while (select && offset--) {
-        select = select.nextSibling;
-      }
-    }
-
-    if (select == null) {
-      throw Error(`Not enough siblings ${count} to shift them`);
-    } else {
-      insertNode$1(target, childrenSelected, select);
-    }
-    return state;
-  }
-
-  static archive(target, receive = DOMArchive.receive) {
-    return new DOMArchive(target, receive);
-  }
-}
-
-const CAPTURING_PHASE = 1;
-
-class DOMinion {
-  constructor(mailbox) {
-    this.mailbox = mailbox;
-    this.decoders = Object.create(null);
-  }
-  static handleEvent(event) {
-    const { currentTarget, type, eventPhase } = event;
-    const node = currentTarget;
-    const host = node.DOMinion;
-    const capture$$1 = event.eventPhase === CAPTURING_PHASE;
-    if (host) {
-      const hash = `${event.type}${capture$$1 ? "!" : "^"}`;
-      const decoder = host.decoders[hash];
-      if (decoder) {
-        const detail = decode(decoder, event);
-        host.mailbox.send(detail, event);
-        return null;
-      }
-    }
-    currentTarget.removeEventListener(type, DOMinion.handleEvent, capture$$1);
-  }
-  addEventDecoder(target, type, decoder, capture$$1) {
-    const hash = `${type}${capture$$1 ? "!" : "^"}`;
-    this.decoders[hash] = decoder;
-    target.addEventListener(type, DOMinion.handleEvent, capture$$1);
-  }
-  removeEventDecoder(target, type, decoder, capture$$1) {
-    const hash = `${type}${capture$$1 ? "!" : "^"}`;
-    delete this.decoders[hash];
-  }
-}
-
-class DOMArchive {
-  constructor(target, receive = DOMArchive.receive) {
-    this.cursor = new DOMPatch();
-
-    this.target = target;
-    this.mailbox = { send: receive };
-  }
-  patch(changeList) {
-    this.cursor.reset(this.target, false, {}, this.mailbox);
-    const result = changeList.encode(DOMPatch, this.cursor);
-    if (result instanceof DOMPatch) {
-      return this.target;
-    } else {
-      return result;
-    }
-  }
-}
-
-DOMArchive.receive = (message, event) => {};
 
 /**
  * Dictionary class used across the library to create `Dict` instances.
@@ -1321,7 +1844,7 @@ Dictionary.prototype = Object.freeze(Object.create(null));
  * }
  * ```
  */
-
+const empty$4 = () => new Dictionary();
 
 /**
  * Create a dictionary with one entry of given key, value pair.
@@ -1333,7 +1856,11 @@ Dictionary.prototype = Object.freeze(Object.create(null));
  * 
  * Note that as with `empty` returned dictionary has open type for values.
  */
-
+const singleton$1 = (key, value) => {
+  const result = new Dictionary();
+  result[key] = value;
+  return result;
+};
 
 /**
  * Create a dictionary from iterable of `[key, value]` pairs
@@ -1367,7 +1894,7 @@ Dictionary.prototype = Object.freeze(Object.create(null));
  * v2 // => ({a:1, b:15}:Dict<number>)
  * ```
  */
-
+const set$1 = (key, value, dict) => (dict[key] = value, dict);
 
 /**
  * Updates the entry in the dictionary for a given key with a provided
@@ -1604,6 +2131,222 @@ Dictionary.prototype = Object.freeze(Object.create(null));
  */
 
 const empty = Object.freeze([]);
+const blank = empty$4();
+
+class AttributeSetting {
+  constructor(namespaceURI, name, value) {
+    this.settingType = settingType.attribute;
+
+    this.namespaceURI = namespaceURI;
+    this.name = name;
+    this.value = value;
+  }
+}
+
+class ListenerSetting {
+  constructor(type, capture, decoder) {
+    this.settingType = settingType.listener;
+
+    this.type = type;
+    this.capture = capture;
+    this.decoder = decoder;
+  }
+}
+
+class TaggedNode {
+  constructor(node, tag) {
+    this.nodeType = nodeType.TAGGED_ELEMENT_NODE;
+
+    this.node = node;
+    this.tag = tag;
+  }
+  toDebugString() {
+    return `<tagged tag=${this.tag.toString()}>${this.node.toDebugString()}</tagged>`;
+  }
+  map(tag) {
+    return new TaggedNode(this, tag);
+  }
+}
+
+class ElementNode {
+  constructor(namespaceURI, localName) {
+    this.attributes = blank;
+    this.properties = blank;
+    this.style = blank;
+    this.listeners = blank;
+
+    this.namespaceURI = namespaceURI;
+    this.localName = localName;
+  }
+  toDebugChildrenString() {
+    return "";
+  }
+  toDebugString() {
+    const { localName, namespaceURI } = this;
+    const attributes = [];
+
+    if (namespaceURI != null) {
+      attributes.push(`xmlns="${namespaceURI}"`);
+    }
+
+    for (const key in this.attributes) {
+      const attribute = this.attributes[key];
+      if (attribute != null && attribute.value != null) {
+        attributes.push(`"${attribute.name}"="${attribute.value}"`);
+      }
+    }
+
+    const properties = [];
+    for (const key in this.properties) {
+      const value = this.properties[key];
+      if (value !== undefined) {
+        properties.push(`\`property:${key}\`=\`${JSON.stringify(value)}\``);
+      }
+    }
+
+    const rules = [];
+    for (const name in this.style) {
+      if (name !== "settingType") {
+        const value = this.style[name];
+        if (value != null) {
+          rules.push(`${cammelCaseToDashDelimeted(name)}:${value}`);
+        }
+      }
+    }
+
+    const style = rules.length === 0 ? "" : ` style="${rules.join(";")}"`;
+
+    const settings = [...attributes, ...properties].join(" ");
+    const details = settings === "" ? style : ` ${settings}${style}`;
+
+    return `<${localName}${details}>${this.toDebugChildrenString()}</${localName}>`;
+  }
+}
+
+const cammelCaseToDashDelimeted = input => {
+  let output = "";
+  for (let ch of input) {
+    if (ch.toUpperCase() == ch) {
+      output += `-${ch.toLowerCase()}`;
+    } else {
+      output += ch;
+    }
+  }
+  return output;
+};
+
+const setSettings = (element, settings) => {
+  for (const setting of settings) {
+    setSetting(element, setting);
+  }
+};
+
+const set = (name, value, dict) => dict === blank ? singleton$1(name, value) : set$1(name, value, dict);
+
+const setSetting = (element, setting) => {
+  switch (setting.settingType) {
+    case settingType.attribute:
+      {
+        const ns = setting.namespaceURI == null ? "" : `@${setting.namespaceURI}`;
+        element.attributes = set(`${setting.name}${ns}`, setting, element.attributes);
+        return element;
+      }
+    case settingType.property:
+      {
+        element.properties = set(setting.name, setting.value, element.properties);
+        return element;
+      }
+    case settingType.style:
+      {
+        element.style = element.style === blank ? Object.assign(Object.create(null), setting) : Object.assign(element.style, setting);
+        return element;
+      }
+    case settingType.listener:
+      {
+        const key = `${setting.type}${setting.capture ? "Capture" : ""}`;
+        element.listeners = set(key, setting, element.listeners);
+
+        return element;
+      }
+    default:
+      {
+        return unreachable(setting);
+      }
+  }
+};
+
+class UnindexedElementNode extends ElementNode {
+  constructor(...args) {
+    var _temp;
+
+    return _temp = super(...args), this.nodeType = nodeType.ELEMENT_NODE, _temp;
+  }
+
+  toDebugChildrenString() {
+    return this.children.map(child => child.toDebugString()).join("");
+  }
+  map(tag) {
+    return new TaggedNode(this, tag);
+  }
+}
+
+const setAttribute = (name, value = "") => new AttributeSetting(null, name, value == null ? null : value);
+
+
+
+
+
+const on$1 = (type, decoder, capture = false) => new ListenerSetting(type, capture, decoder);
+
+const style$1 = rules => {
+  const style = rules;
+  style.settingType = settingType.style;
+  return style;
+};
+
+
+
+
+
+const createElement = (localName, settings = empty, children = empty) => {
+  const element = new UnindexedElementNode(null, localName);
+  setSettings(element, settings);
+  element.children = children;
+  return element;
+};
+
+
+
+
+
+
+
+
+
+const createHost = (settings = empty, children = empty) => createElement("x-host", settings, children);
+
+const element = name => (settings = [], children = []) => createElement(name, settings, children);
+const attribute = name => (value = "") => setAttribute(name, value);
+
+
+
+const className = attribute("class");
+
+const main = element("main");
+
+
+const input = element("input");
+
+
+
+
+
+
+
+
+
+
+const div = element("div");
 
 
 
@@ -1616,6 +2359,9 @@ const empty = Object.freeze([]);
 
 
 
+const data = (name, value) => setAttribute(`data-${name}`, value);
+
+const on = type => (decoder, capture = false) => on$1(type, decoder, capture);
 
 
 
@@ -1623,14 +2369,564 @@ const empty = Object.freeze([]);
 
 
 
+const onChange = on("change");
 
 
 
 
 
+const style = style$1;
+
+const unreachable$2 = value => {
+  const format = JSON.stringify(value);
+  throw new TypeError(`Internal error: Encountered impossible value: ${format}`);
+};
+
+const nofx = new class {
+  constructor() {
+    this.size = 0;
+  }
+
+  and(fx) {
+    return fx;
+  }
+  perform() {}
+}();
+
+class BatchFX {
+  constructor(effects) {
+    this.effects = effects;
+    this.size = effects.length;
+  }
+  perform(process) {
+    for (let fx of this.effects) {
+      fx.perform(process);
+    }
+  }
+  and(fx) {
+    if (fx.size === 0) {
+      return this;
+    } else {
+      return new BatchFX([...this.effects, fx]);
+    }
+  }
+}
 
 
-const mount = DOMPatch.archive;
+const and$2 = (left, right) => left.size === 0 ? right : right.size === 0 ? left : new BatchFX([left, right]);
+
+
+
+// const update = match({
+//   inc(delta: number, state: number) {
+//     return [state + delta, send({ toggle: true })]
+//   },
+//   dec(delta: number, state: number) {
+//     return [state - delta, nofx]
+//   },
+//   toggle(value: boolean, state: number) {
+//     return [state, nofx]
+//   },
+//   noop(_, state: number) {
+//     return [state, nofx]
+//   }
+// })
+
+// // update(update(0, { inc: 6 }), { toggle: true })
+// update({ inc: 6, toggle: true }, 9)
+
+var commonjsGlobal = typeof window !== 'undefined' ? window : typeof global !== 'undefined' ? global : typeof self !== 'undefined' ? self : {};
+
+
+
+function unwrapExports (x) {
+	return x && x.__esModule && Object.prototype.hasOwnProperty.call(x, 'default') ? x['default'] : x;
+}
+
+function createCommonjsModule(fn, module) {
+	return module = { exports: {} }, fn(module, module.exports), module.exports;
+}
+
+var performanceNow = createCommonjsModule(function (module) {
+// Generated by CoffeeScript 1.7.1
+(function () {
+  var getNanoSeconds, hrtime, loadTime;
+
+  if (typeof performance !== "undefined" && performance !== null && performance.now) {
+    module.exports = function () {
+      return performance.now();
+    };
+  } else if (typeof process !== "undefined" && process !== null && process.hrtime) {
+    module.exports = function () {
+      return (getNanoSeconds() - loadTime) / 1e6;
+    };
+    hrtime = process.hrtime;
+    getNanoSeconds = function () {
+      var hr;
+      hr = hrtime();
+      return hr[0] * 1e9 + hr[1];
+    };
+    loadTime = getNanoSeconds();
+  } else if (Date.now) {
+    module.exports = function () {
+      return Date.now() - loadTime;
+    };
+    loadTime = Date.now();
+  } else {
+    module.exports = function () {
+      return new Date().getTime() - loadTime;
+    };
+    loadTime = new Date().getTime();
+  }
+}).call(commonjsGlobal);
+});
+
+var requestPolyfilledAnimationFrame_1 = createCommonjsModule(function (module, exports) {
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.cancelAnimationFrame = exports.requestAnimationFrame = exports.cancelPolyfilledAnimationFrame = exports.requestPolyfilledAnimationFrame = exports.now = undefined;
+
+
+
+var _performanceNow2 = _interopRequireDefault(performanceNow);
+
+function _interopRequireDefault(obj) {
+  return obj && obj.__esModule ? obj : { default: obj };
+}
+
+var now = exports.now = _performanceNow2.default;
+
+var lastTime = now();
+
+var requestPolyfilledAnimationFrame = exports.requestPolyfilledAnimationFrame = function requestPolyfilledAnimationFrame(callback) {
+  var time = now();
+  var remaining = Math.max(0, 16 - (time - lastTime));
+  lastTime = time + remaining;
+  return setTimeout(callback, remaining, lastTime);
+};
+
+var cancelPolyfilledAnimationFrame = exports.cancelPolyfilledAnimationFrame = function cancelPolyfilledAnimationFrame(id) {
+  return clearTimeout(id);
+};
+
+var requestAnimationFrame = exports.requestAnimationFrame = typeof window === 'undefined' ? requestPolyfilledAnimationFrame : typeof window.msRequestAnimationFrame === 'function' ? function (callback) {
+  return window.msRequestAnimationFrame(callback);
+} : typeof window.mozRequestAnimationFrame === 'function' ? function (callback) {
+  return window.mozRequestAnimationFrame(callback);
+} : typeof window.webkitRequestAnimationFrame === 'function' ? function (callback) {
+  return window.webkitRequestAnimationFrame(callback);
+} : typeof window.oRequestAnimationFrame === 'function' ? function (callback) {
+  return window.oRequestAnimationFrame(callback);
+} : requestPolyfilledAnimationFrame;
+
+var cancelAnimationFrame = exports.cancelAnimationFrame = typeof window === 'undefined' ? cancelPolyfilledAnimationFrame : typeof window.msCancelAnimationFrame === 'function' ? function (id) {
+  return window.msCancelAnimationFrame(id);
+} : typeof window.mozCancelAnimationFrame === 'function' ? function (id) {
+  return window.mozCancelAnimationFrame(id);
+} : typeof window.webkitCancelAnimationFrame === 'function' ? function (id) {
+  return window.webkitCancelAnimationFrame(id);
+} : typeof window.oCancelAnimationFrame === 'function' ? function (id) {
+  return window.oCancelAnimationFrame(id);
+} : typeof window.msCancelRequestAnimationFrame === 'function' ? function (id) {
+  return window.msCancelRequestAnimationFrame(id);
+} : typeof window.mozCancelRequestAnimationFrame === 'function' ? function (id) {
+  return window.mozCancelRequestAnimationFrame(id);
+} : typeof window.webkitCancelRequestAnimationFrame === 'function' ? function (id) {
+  return window.webkitCancelRequestAnimationFrame(id);
+} : typeof window.oCancelRequestAnimationFrame === 'function' ? function (id) {
+  return window.oCancelRequestAnimationFrame(id);
+} : cancelPolyfilledAnimationFrame;
+});
+
+unwrapExports(requestPolyfilledAnimationFrame_1);
+var requestPolyfilledAnimationFrame_2 = requestPolyfilledAnimationFrame_1.cancelAnimationFrame;
+var requestPolyfilledAnimationFrame_3 = requestPolyfilledAnimationFrame_1.requestAnimationFrame;
+var requestPolyfilledAnimationFrame_4 = requestPolyfilledAnimationFrame_1.cancelPolyfilledAnimationFrame;
+var requestPolyfilledAnimationFrame_5 = requestPolyfilledAnimationFrame_1.requestPolyfilledAnimationFrame;
+var requestPolyfilledAnimationFrame_6 = requestPolyfilledAnimationFrame_1.now;
+
+var preemptiveAnimationFrame = createCommonjsModule(function (module, exports) {
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.forceAnimationFrame = exports.cancelAnimationFrame = exports.requestAnimationFrame = exports.now = undefined;
+
+
+
+var RAF = _interopRequireWildcard(requestPolyfilledAnimationFrame_1);
+
+function _interopRequireWildcard(obj) {
+  if (obj && obj.__esModule) {
+    return obj;
+  } else {
+    var newObj = {};if (obj != null) {
+      for (var key in obj) {
+        if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key];
+      }
+    }newObj.default = obj;return newObj;
+  }
+}
+
+// Invariants:
+// 1. In the NO_REQUEST state, there is never a scheduled animation frame.
+// 2. In the PENDING_REQUEST and EXTRA_REQUEST states, there is always exactly
+// one scheduled animation frame.
+var NO_REQUEST = 0;
+
+var PENDING_REQUEST = 1;
+var EXTRA_REQUEST = 2;
+
+var requestID = null;
+var nextID = 0;
+var state = NO_REQUEST;
+var requests = [];
+var ids = [];
+
+var absent = new Error('absent');
+
+var now = exports.now = RAF.now;
+
+var requestAnimationFrame = exports.requestAnimationFrame = function requestAnimationFrame(request) {
+  if (state === NO_REQUEST) {
+    requestID = RAF.requestAnimationFrame(performAnimationFrame);
+  }
+
+  var id = ++nextID;
+  requests.push(request);
+  ids.push(id);
+  state = PENDING_REQUEST;
+  return id;
+};
+
+var cancelAnimationFrame = exports.cancelAnimationFrame = function cancelAnimationFrame(id) {
+  var index = ids.indexOf(id);
+  if (index >= 0) {
+    ids.splice(index, 1);
+    requests.splice(index, 1);
+  }
+};
+
+var forceAnimationFrame = exports.forceAnimationFrame = function forceAnimationFrame() {
+  var time = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : now();
+
+  switch (state) {
+    case NO_REQUEST:
+      break;
+    default:
+      if (requestID != null) {
+        RAF.cancelAnimationFrame(requestID);
+        requestID = null;
+      }
+      performAnimationFrame(time);
+  }
+};
+
+var performAnimationFrame = function performAnimationFrame(time) {
+  switch (state) {
+    case NO_REQUEST:
+      // This state should not be possible. How can there be no
+      // request, yet somehow we are actively fulfilling a
+      // request?
+      throw Error('Unexpected frame request');
+    case PENDING_REQUEST:
+      // At this point, we do not *know* that another frame is
+      // needed, but we make an extra frame request just in
+      // case. It's possible to drop a frame if frame is requested
+      // too late, so we just do it preemptively.
+      requestID = RAF.requestAnimationFrame(performAnimationFrame);
+      state = EXTRA_REQUEST;
+      ids.splice(0);
+      dispatchAnimationFrame(requests.splice(0), 0, time);
+      break;
+    case EXTRA_REQUEST:
+      // Turns out the extra request was not needed, so we will
+      // stop requesting. No reason to call it all the time if
+      // no one needs it.
+      state = NO_REQUEST;
+      break;
+  }
+};
+
+var dispatchAnimationFrame = function dispatchAnimationFrame(requests, index, time) {
+  var exception = absent;
+  var count = requests.length;
+  try {
+    while (index < count) {
+      var request = requests[index];
+      index = index + 1;
+      request(time);
+    }
+  } catch (error) {
+    exception = error;
+  }
+
+  if (index < count) {
+    dispatchAnimationFrame(requests, index, time);
+  }
+
+  if (exception !== absent) {
+    throw exception;
+  }
+};
+});
+
+unwrapExports(preemptiveAnimationFrame);
+var preemptiveAnimationFrame_1 = preemptiveAnimationFrame.forceAnimationFrame;
+var preemptiveAnimationFrame_2 = preemptiveAnimationFrame.cancelAnimationFrame;
+var preemptiveAnimationFrame_3 = preemptiveAnimationFrame.requestAnimationFrame;
+var preemptiveAnimationFrame_4 = preemptiveAnimationFrame.now;
+
+class Tick$1 {
+  constructor(toMessage) {
+    this.size = 1;
+
+    this.toMessage = toMessage;
+  }
+  perform(process) {
+    preemptiveAnimationFrame_3(time => process.send(this.toMessage(time)));
+  }
+  and(other) {
+    return and$2(this, other);
+  }
+}
+
+var tick = (toMessage => new Tick$1(toMessage));
+
+class Model {
+  constructor(n, time) {
+    this.n = n;
+    this.time = time;
+  }
+  static new(time = 0, n = 200) {
+    return new Model(n, time);
+  }
+  static updateTime(model, time) {
+    if (model.time === time) {
+      return model;
+    } else {
+      return new Model(model.n, time);
+    }
+  }
+  static updateCount(model, n) {
+    if (model.n === n) {
+      return model;
+    } else {
+      return new Model(n, model.time);
+    }
+  }
+}
+
+const init = () => [Model.new(), tick(Tick)];
+
+const update = (message, model) => {
+  switch (message.type) {
+    case "Tick":
+      return [Model.updateTime(model, message.time), tick(Tick)];
+    case "UpdateCount":
+      {
+        return [Model.updateCount(model, message.n), nofx];
+      }
+    default:
+      return unreachable$2(message);
+  }
+};
+
+
+
+
+
+const Tick = time => ({
+  type: "Tick",
+  time
+});
+
+const UpdateCount = form({
+  type: ok$1("UpdateCount"),
+  n: at(["target", "valueAsNumber"], Integer$$1)
+});
+
+
+
+const viewObject = (t, n, x, y) => div([className("object"), style({
+  left: `${x}px`,
+  top: `${y}px`
+})], [viewCircle(t, n, n)]);
+
+
+
+const viewLemniscate = (t, n) => {
+  var a$$1 = 150;
+  var x = a$$1 * Math.sin(t);
+  var y = a$$1 * Math.sin(t) * Math.cos(t);
+  return viewObject(t, n, x, y);
+};
+
+const viewCircle = (t, n, count) => {
+  const r = n * 16;
+  return div([className(`circle`), data("radius", `${r}`), styleCircle(t, n, r, count)], n == 0 ? [] : [viewCircle(t, n - 1, count)]);
+};
+
+const styleCircle = (t, n, r, count) => style({
+  borderColor: colorCircle(t, n, count),
+  marginLeft: `-${r / 2 + 3}px`,
+  marginTop: `-${r / 2 + 3}px`,
+  width: `${r}px`,
+  height: `${r}px`
+});
+
+const colorCircle = (t, n, count) => {
+  t /= 3.0;
+  const base = getInterpolatedColor("fg", t % 1.0);
+  const lightness = 1.0 - n / count;
+  return getCSSRGBAColor(base.r, base.g, base.b, lightness);
+};
+
+function rgbToHSV(originalR, originalG, originalB) {
+  var rr,
+      gg = 0,
+      bb = 0,
+      r = originalR / 255,
+      g = originalG / 255,
+      b = originalB / 255,
+      h = 0,
+      s = 0,
+      v = Math.max(r, g, b),
+      diff$$1 = v - Math.min(r, g, b),
+      diffc = function (c) {
+    return (v - c) / 6 / diff$$1 + 1 / 2;
+  };
+
+  if (diff$$1 === 0) {
+    h = s = 0;
+  } else {
+    s = diff$$1 / v;
+    rr = diffc(r);
+    gg = diffc(g);
+    bb = diffc(b);
+
+    if (r === v) {
+      h = bb - gg;
+    } else if (g === v) {
+      h = 1 / 3 + rr - bb;
+    } else if (b === v) {
+      h = 2 / 3 + gg - rr;
+    }
+
+    if (h < 0) {
+      h += 1;
+    } else if (h > 1) {
+      h -= 1;
+    }
+  }
+  return {
+    h: h,
+    s: s,
+    v: v
+  };
+}
+
+function hsvToRGB(h, s, v) {
+  let [r, g, b] = [0, 0, 0];
+  let i = Math.floor(h * 6);
+  let f = h * 6 - i;
+  let p$$1 = v * (1 - s);
+  let q = v * (1 - f * s);
+  let t = v * (1 - (1 - f) * s);
+  switch (i % 6) {
+    case 0:
+      r = v;
+      g = t;
+      b = p$$1;
+      break;
+    case 1:
+      r = q;
+      g = v;
+      b = p$$1;
+      break;
+    case 2:
+      r = p$$1;
+      g = v;
+      b = t;
+      break;
+    case 3:
+      r = p$$1;
+      g = q;
+      b = v;
+      break;
+    case 4:
+      r = t;
+      g = p$$1;
+      b = v;
+      break;
+    case 5:
+      r = v;
+      g = p$$1;
+      b = q;
+      break;
+  }
+  return {
+    r: Math.round(r * 255),
+    g: Math.round(g * 255),
+    b: Math.round(b * 255)
+  };
+}
+
+function parseCSSColorToHSV(color) {
+  var r = parseInt(color.substr(1, 2), 16);
+  var g = parseInt(color.substr(3, 2), 16);
+  var b = parseInt(color.substr(5, 2), 16);
+  return rgbToHSV(r, g, b);
+}
+
+function lerp(a$$1, b, t) {
+  return a$$1 + (b - a$$1) * t;
+}
+
+function clamp(lo, hi, x) {
+  return x < lo ? lo : x > hi ? hi : x;
+}
+
+function lerpHSV(a$$1, b, t) {
+  var h = lerp(a$$1.h, b.h, t);
+  var s = lerp(a$$1.s, b.s, t);
+  var v = lerp(a$$1.v, b.v, t);
+  //var h = a.h, s = a.s, v = a.v;
+  var result = hsvToRGB(h, s, v);
+  return result;
+}
+
+var palettes = [{
+  fg: "#fef6df",
+  bg: "#74c3c8"
+}, {
+  fg: "#fccf74",
+  bg: "#41657f"
+}, {
+  fg: "#d9e0e8",
+  bg: "#945d72"
+}].map(function (palette) {
+  return {
+    bg: parseCSSColorToHSV(palette.bg),
+    fg: parseCSSColorToHSV(palette.fg)
+  };
+});
+
+function getInterpolatedColor(which, t) {
+  t *= palettes.length;
+  var prevIndex = Math.floor(t) % palettes.length;
+  var nextIndex = (prevIndex + 1) % palettes.length;
+  t = clamp(-0.5, 0.5, (t % 1.0 - 0.5) * 5.0) + 0.5;
+  var result = lerpHSV(palettes[prevIndex][which], palettes[nextIndex][which], t);
+  return result;
+}
+
+function getCSSRGBAColor(r, g, b, a$$1) {
+  r = Math.round(clamp(0, 255, r));
+  g = Math.round(clamp(0, 255, g));
+  b = Math.round(clamp(0, 255, b));
+  return "rgba(" + r + ", " + g + ", " + b + ", " + a$$1 + ")";
+}
 
 /// @file
 /// @addtogroup flatbuffers_javascript_api
@@ -9802,113 +11098,104 @@ FlatBuffer.encoder = FlatBufferEncoder.encoder;
 FlatBuffer.encode = FlatBufferEncoder.encode;
 FlatBuffer.decode = FlatBufferDecoder.decode;
 
-const indexOf = (child, parent) => {
-  let index$$1 = 0;
-  let node = parent.firstChild;
-  while (node) {
-    if (node === child) {
-      return index$$1;
-    } else {
-      index$$1++;
-      node = node.nextSibling;
-    }
-  }
-
-  return null;
-};
-
-const getPath = (from, to) => {
-  let path = [];
-  let node = from;
-  while (node !== to) {
-    const { parentNode } = node;
-    if (parentNode) {
-      const n = indexOf(node, parentNode);
-      if (n == null) {
-        return null;
-      } else {
-        path.unshift(n);
-        node = parentNode;
-      }
-    } else {
-      return null;
-    }
-  }
-  return path;
-};
+const ELEMENT_NODE$1 = 1;
+const TAGGED_ELEMENT_NODE = 22;
+const THUNK_NODE = 23;
 
 class Process {
-  static spawn(script, target = window.document.body) {
-    const mailbox = [];
-    const host = mount(target, (result, event) => process.handleUIEvent(result, event));
-    const worker = new Worker(script);
+  constructor({ view, update }, worker, node) {
+    this.requestID = null;
 
-    const process = new Process(target, worker, mailbox, host);
+    this.view = view;
+    this.update = update;
+    this.worker = worker;
+    this.node = node;
+  }
+  static spawn(program, worker, node = createHost()) {
+    const process = new Process(program, worker, node);
+    worker.addEventListener("message", process);
+    const [state, fx] = program.init();
+
+    process.transact(state);
+    fx.perform(process);
     return process;
   }
-  constructor(target, worker, mailbox, host) {
-    this.target = target;
-    this.worker = worker;
-    this.mailbox = mailbox;
-    this.host = host;
-    worker.addEventListener("message", this);
-  }
   handleEvent(event) {
-    const { buffer, byteOffset } = event.data;
-    const changeList = new Uint8Array(buffer, byteOffset);
-    this.mailbox.unshift(changeList);
+    this.receive(event.data.message, event.data.path);
   }
-  handleUIEvent(result, event) {
-    const { worker, target } = this;
-    if (result.isOk) {
-      const { value: value$$1 } = result;
-      if (value$$1 != null) {
-        const path = getPath(event.currentTarget, target);
-        worker.postMessage({
-          message: value$$1,
-          path
-        });
-      }
+  transact(state) {
+    const node = createHost([], [this.view(state)]);
+    const changeList = FlatBuffer.encode(diff(this.node, node));
+    if (changeList.isError === true) {
+      console.error(changeList);
     } else {
-      console.error(result.error);
+      const { buffer, byteOffset } = changeList;
+
+      this.requestID = null;
+      this.node = node;
+      this.state = state;
+      self.postMessage({ buffer, byteOffset }, [buffer]);
     }
   }
-  tick() {
-    const { mailbox, host } = this;
-    if (mailbox.length > 0) {
-      const changeList = mailbox.pop();
-      const result = patch(host, FlatBuffer.decode(changeList));
-      if (result.isError) {
-        console.error(result);
+  receive(packet, path) {
+    const payload = Process.toMessage(this.node, path, packet);
+    if (payload) {
+      this.send(payload);
+    } else {
+      console.error("Message receiver not found", path, packet);
+    }
+  }
+  send(payload) {
+    const [state, fx] = this.update(payload, this.state);
+    this.transact(state);
+    fx.perform(this);
+  }
+  static toMessage(root, path, payload) {
+    const tags = [];
+    let node = root;
+    let index = 0;
+    const count = path.length;
+    while (index < count) {
+      const n = path[index];
+      switch (node.nodeType) {
+        case ELEMENT_NODE$1:
+          {
+            node = node.children[n];
+            index++;
+            break;
+          }
+        case TAGGED_ELEMENT_NODE:
+          {
+            tags.unshift(node.tag);
+            node = node.node;
+            break;
+          }
+        case THUNK_NODE:
+          {
+            node = node.force();
+            break;
+          }
+        default:
+          {
+            return null;
+          }
       }
     }
-    return mailbox.length > 0;
+
+    let tagged = payload;
+    for (const tag of tags) {
+      tagged = tag(tagged);
+    }
+    return tagged;
   }
 }
 
-let lastTime = 0;
-let frameCount = 0;
-const fps = document.getElementById("fps") || document.createElement("div");
-const scene = document.querySelector("#scene") || window.document.body;
-function updateFPS(time) {
-  frameCount++;
-  if (lastTime + 1000.0 <= time) {
-    fps.textContent = `${frameCount}`;
-    lastTime = time;
-    frameCount = 0;
-  }
-}
-
-const process = Process.spawn("./Main.js", scene);
-
-const update = now => {
-  while (process.mailbox.length) {
-    process.tick();
-  }
-  updateFPS(now);
-  requestAnimationFrame(update);
+const view = ({ time, n }) => {
+  const t = time / 1600;
+  return main([], [input([onChange(UpdateCount)]), div(), viewLemniscate(t, n)]);
 };
-requestAnimationFrame(update);
+
+Process.spawn({ update, init, Model, view }, self, createHost([], [main([], [input(), div()])]));
 
 }());
-//# sourceMappingURL=Embed.js.map
+//# sourceMappingURL=Leminscate.js.map

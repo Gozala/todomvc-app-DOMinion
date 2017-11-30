@@ -51,6 +51,8 @@ import {
   px
 } from "../DOM"
 import unreachable from "unreachable"
+import { nofx, send, type FX } from "../Effect"
+import tick from "../Tick"
 
 export class Model {
   n: number
@@ -82,19 +84,22 @@ export type Message =
   | { type: "Tick", time: number }
   | { type: "UpdateCount", n: Decoder.integer }
 
-export const update = (message: Message, model: Model): [Model, () => void] => {
+export const init = () => [Model.new(), tick(Tick)]
+
+export const update = (
+  message: Message,
+  model: Model
+): [Model, FX<Message>] => {
   switch (message.type) {
     case "Tick":
-      return [Model.updateTime(model, message.time), ignore]
+      return [Model.updateTime(model, message.time), tick(Tick)]
     case "UpdateCount": {
-      return [Model.updateCount(model, message.n), ignore]
+      return [Model.updateCount(model, message.n), nofx]
     }
     default:
       return unreachable(message)
   }
 }
-
-const ignore = () => {}
 
 export const view = ({ time, n }: Model): Node<Message> => {
   const t = time / 1600
@@ -104,7 +109,7 @@ export const view = ({ time, n }: Model): Node<Message> => {
   )
 }
 
-const viewControl = n =>
+export const viewControl = (n: number): Node<Message> =>
   input([
     id("circle-count"),
     type("range"),
@@ -114,11 +119,18 @@ const viewControl = n =>
     onChange(UpdateCount)
   ])
 
-const UpdateCount = Decoder.form({
+const Tick = (time: number): Message => ({
+  type: "Tick",
+  time
+})
+
+export const UpdateCount = Decoder.form({
   type: Decoder.ok("UpdateCount"),
   n: Decoder.at(["target", "valueAsNumber"], Decoder.Integer)
 })
-const styleBackground = t => style({ backgroundColor: backgroundColor(t) })
+
+export const styleBackground = (t: number) =>
+  style({ backgroundColor: backgroundColor(t) })
 
 const viewObject = (t, n, x, y) =>
   div(
@@ -132,14 +144,14 @@ const viewObject = (t, n, x, y) =>
     [viewCircle(t, n, n)]
   )
 
-const viewOrbiting = (t, n) => {
+export const viewOrbiting = (t: number, n: number): Node<Message> => {
   const d = 200
   const x = Math.sin(t) * d
   const y = Math.cos(t) * d
   return viewObject(t, n, x, y)
 }
 
-const viewLemniscate = (t, n) => {
+export const viewLemniscate = (t: number, n: number): Node<Message> => {
   var a = 150
   var x = a * Math.sin(t)
   var y = a * Math.sin(t) * Math.cos(t)

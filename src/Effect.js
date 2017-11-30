@@ -2,24 +2,30 @@
 
 type Message = { inc: number } | { dec: number } | { noop: null }
 
+export interface Process<message> {
+  send(message): void;
+}
+
 interface NoFX {
   size: 0;
   and<message>(FX<message>): FX<message>;
+  perform(Process<empty>): void;
 }
 
-interface SomeFX<message> {
+export interface SomeFX<message> {
   size: number;
-  perform((message) => void): void;
+  perform(Process<message>): void;
   and(FX<message>): FX<message>;
 }
 
-type FX<message> = SomeFX<message> | NoFX
+export type FX<message> = SomeFX<message> | NoFX
 
-const nofx: NoFX = new class {
+export const nofx: NoFX = new class {
   size = 0
   and<message>(fx: FX<message>): FX<message> {
     return fx
   }
+  perform() {}
 }()
 
 class BatchFX<message> implements SomeFX<message> {
@@ -29,9 +35,9 @@ class BatchFX<message> implements SomeFX<message> {
     this.effects = effects
     this.size = effects.length
   }
-  perform(receive: message => void): void {
+  perform(process: Process<message>): void {
     for (let fx of this.effects) {
-      fx.perform(receive)
+      fx.perform(process)
     }
   }
   and(fx: FX<message>): FX<message> {
@@ -49,8 +55,8 @@ class Send<message> implements SomeFX<message> {
   constructor(payload: message) {
     this.payload = payload
   }
-  perform(receive: message => void): void {
-    receive(this.payload)
+  perform(process: Process<message>): void {
+    process.send(this.payload)
   }
   and(fx: FX<message>): FX<message> {
     if (fx.size === 0) {
@@ -62,6 +68,8 @@ class Send<message> implements SomeFX<message> {
 }
 
 export const send = <a>(payload: a): FX<a> => new Send(payload)
+export const and = <a>(left: FX<a>, right: FX<a>): FX<a> =>
+  left.size === 0 ? right : right.size === 0 ? left : new BatchFX([left, right])
 
 interface Match {
   <model, message>(
@@ -89,20 +97,20 @@ export const match = <model, message: {}>(
   return [state, fx]
 }
 
-const update = match({
-  inc(delta: number, state: number) {
-    return [state + delta, send({ toggle: true })]
-  },
-  dec(delta: number, state: number) {
-    return [state - delta, nofx]
-  },
-  toggle(value: boolean, state: number) {
-    return [state, nofx]
-  },
-  noop(_, state: number) {
-    return [state, nofx]
-  }
-})
+// const update = match({
+//   inc(delta: number, state: number) {
+//     return [state + delta, send({ toggle: true })]
+//   },
+//   dec(delta: number, state: number) {
+//     return [state - delta, nofx]
+//   },
+//   toggle(value: boolean, state: number) {
+//     return [state, nofx]
+//   },
+//   noop(_, state: number) {
+//     return [state, nofx]
+//   }
+// })
 
-// update(update(0, { inc: 6 }), { toggle: true })
-update({ inc: 6, toggle: true }, 9)
+// // update(update(0, { inc: 6 }), { toggle: true })
+// update({ inc: 6, toggle: true }, 9)

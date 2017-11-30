@@ -15,9 +15,22 @@ function updateFPS(time) {
   }
 }
 
-const process = Process.spawn("./Main.js", scene)
+const moirView = Process.spawn("./Moir.js", scene)
+const orbitingView = Process.spawn("./Orbiting.js", scene)
+const lemniscateView = Process.spawn("./Leminscate.js", scene)
+
+const select = (first, ...rest) => {
+  let selection = first
+  for (const process of rest) {
+    if (process.mailbox.length > selection.mailbox.length) {
+      selection = process
+    }
+  }
+  return selection
+}
 
 const update = now => {
+  const process = select(moirView, orbitingView, lemniscateView)
   while (process.mailbox.length) {
     process.tick()
   }

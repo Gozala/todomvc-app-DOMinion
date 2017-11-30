@@ -49,7 +49,15 @@ const watch =
     ? [serve(), livereload()]
     : []
 
+const workers = process.argv.includes("--worker")
+  ? process.argv[process.argv.indexOf("--worker") + 1].split(",")
+  : []
+
+const embed = process.argv.includes("--embed")
+  ? process.argv[process.argv.indexOf("--embed") + 1].split(",")
+  : []
+
 export default [
-  bundle(`${String(process.env.BUNDLE)}/Main`),
-  bundle(`${String(process.env.BUNDLE)}/Embed`, ...watch)
+  ...workers.map(bundle),
+  ...embed.map(path => bundle(path, ...watch))
 ]
