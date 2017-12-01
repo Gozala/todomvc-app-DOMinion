@@ -40,29 +40,38 @@
     "build:types": "flow-copy-source --verbose src lib",
     "build:node": "babel --out-dir lib src",
     "build:api": "documentation readme --section=API src/dominion.js",
-    "build:docs": "documentation build --document-exported src/** -f html --o docs",
-    "build:schema": "npm run build:schema:ChangeLog && npm run build:schema:Decoder && npm run build:schema:JSON",
-    "build:schema:ChangeLog": "flatc --ts src/Format/FlatBuffer/ChangeLog.fbs/ChangeLog.fbs && mv ChangeLog_generated.ts src/Format/FlatBuffer/ChangeLog.fbs/ChangeLog.ts",
-    "build:schema:Decoder": "flatc --ts src/Format/FlatBuffer/Decoder.fbs/Decoder.fbs && mv Decoder_generated.ts src/Format/FlatBuffer/Decoder.fbs/Decoder.ts",
-    "build:schema:JSON": "flatc --ts src/Format/FlatBuffer/JSON.fbs/JSON.fbs && mv JSON_generated.ts src/Format/FlatBuffer/JSON.fbs/JSON.ts",
+    "build:docs":
+      "documentation build --document-exported src/** -f html --o docs",
+    "build:schema":
+      "npm run build:schema:ChangeLog && npm run build:schema:Decoder && npm run build:schema:JSON",
+    "build:schema:ChangeLog":
+      "flatc --ts src/Format/FlatBuffer/ChangeLog.fbs/ChangeLog.fbs && mv ChangeLog_generated.ts src/Format/FlatBuffer/ChangeLog.fbs/ChangeLog.ts",
+    "build:schema:Decoder":
+      "flatc --ts src/Format/FlatBuffer/Decoder.fbs/Decoder.fbs && mv Decoder_generated.ts src/Format/FlatBuffer/Decoder.fbs/Decoder.ts",
+    "build:schema:JSON":
+      "flatc --ts src/Format/FlatBuffer/JSON.fbs/JSON.fbs && mv JSON_generated.ts src/Format/FlatBuffer/JSON.fbs/JSON.ts",
     "build:todo": "rollup -c --worker todo/Main --embed todo/Main",
     "build:triangle": "rollup -c --worker triangle/Main --embed triangle/Embed",
     "build:moir": "rollup -c --worker moir/Main --embed moir/Embed",
-    "build:parallel-moir": "rollup -c --worker parallel-moir/Moir,parallel-moir/Orbiting,parallel-moir/Leminscate --embed parallel-moir/Embed",
-    "build": "npm run build:todo && npm run build:triangle && npm run build:moir && npm run build:parallel-moir",
+    "build:parallel-moir":
+      "rollup -c --worker parallel-moir/Moir,parallel-moir/Orbiting,parallel-moir/Leminscate --embed parallel-moir/Embed",
+    "build":
+      "npm run build:todo && npm run build:triangle && npm run build:moir && npm run build:parallel-moir",
     "prepublish": "npm run build && npm test",
     "precommit": "lint-staged",
     "start:todo": "rollup -w -c --worker todo/Main --embed todo/Embed",
-    "start:triangle": "rollup -w -c --worker triangle/Main --embed triangle/Main",
+    "start:triangle":
+      "rollup -w -c --worker triangle/Main --embed triangle/Main",
+    "start:parallel-triangle":
+      "rollup -w -c --worker parallel-triangle/Left,parallel-triangle/Right --embed parallel-triangle/Main",
     "start:moir": "rollup -w -c --worker moir/Main --embed moir/Embed",
-    "start:parallel-moir": "rollup -c -w --worker parallel-moir/Moir,parallel-moir/Orbiting,parallel-moir/Leminscate --embed parallel-moir/Embed",
-    "start": "flow-copy-source --watch --verbose src lib & babel --watch --out-dir lib src"
+    "start:parallel-moir":
+      "rollup -c -w --worker parallel-moir/Moir,parallel-moir/Orbiting,parallel-moir/Leminscate --embed parallel-moir/Embed",
+    "start":
+      "rollup -c -w --worker todo/Main,triangle/Main,moir/Main,parallel-moir/Moir,parallel-moir/Orbiting,parallel-moir/Leminscate --embed todo/Embed,triangle/Main,moir/Embed,parallel-moir/Embed"
   },
   "lint-staged": {
-    "src/**/*.js": [
-      "prettier --parser flow --no-semi --write",
-      "git add"
-    ]
+    "src/**/*.js": ["prettier --parser flow --no-semi --write", "git add"]
   },
   "quokka": {
     "alias": {
@@ -73,9 +82,6 @@
     },
     "pro": true,
     "babel": true,
-    "plugins": [
-      "alias-quokka-plugin",
-      "jsdom-quokka-plugin"
-    ]
+    "plugins": ["alias-quokka-plugin", "jsdom-quokka-plugin"]
   }
 }

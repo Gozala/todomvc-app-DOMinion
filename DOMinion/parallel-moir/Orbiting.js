@@ -993,11 +993,6 @@ const diffListeners = (last, next, log) => {
 };
 
 /**
- * Represents succeeded result and contains result `value`.
- * @param a type of the `value` for this result.
- */
-
-/**
  * Library for representing the `Result` of a computation that may fail. Which
  * is a more type friendly way to handle errors than exceptions.
  */
@@ -1736,6 +1731,15 @@ class Maybe {
 }
 
 /**
+ * Parses given `input` string into a JSON value and then runs given
+ * `Decoder<a>` on it. Returns `Result` with `Result.Error<Decoder.ParseError>`
+ * if the string is not well-formed JSON or `Result.Error<Decoder.Error>` if
+ * the value can't be decoded with a given `Decoder<a>`. If operation is
+ * successfull returns `Result.Ok<a>`.
+ */
+
+
+/**
  * Runs given `Decoder<a>` on a given JSON value. Returns `Result` that either
  * contains `Decoder.Error` if value can't be decoded with a given decoder or
  * a `Result.Ok<a>`.
@@ -2290,32 +2294,6 @@ class UnindexedElementNode extends ElementNode {
   }
 }
 
-class ThunkNode {
-  force() {
-    if (this.node == null) {
-      return this.node = this.render(...this.args);
-    } else {
-      return this.node;
-    }
-  }
-  constructor(render, args) {
-    _initialiseProps.call(this);
-
-    this.render = render;
-    this.args = args;
-  }
-  toDebugString() {
-    return this.force().toDebugString();
-  }
-  map(tag) {
-    return new TaggedNode(this, tag);
-  }
-}
-
-var _initialiseProps = function () {
-  this.nodeType = nodeType.THUNK_NODE;
-};
-
 const setAttribute = (name, value = "") => new AttributeSetting(null, name, value == null ? null : value);
 
 
@@ -2347,7 +2325,7 @@ const createElement = (localName, settings = empty, children = empty) => {
 
 
 
-const createThunk = (view, ...args) => new ThunkNode(view, args);
+
 
 const createHost = (settings = empty, children = empty) => createElement("x-host", settings, children);
 
@@ -2355,7 +2333,7 @@ const element = name => (settings = [], children = []) => createElement(name, se
 const attribute = name => (value = "") => setAttribute(name, value);
 
 
-const thunk = createThunk;
+
 const className = attribute("class");
 
 const main = element("main");
@@ -2402,11 +2380,6 @@ const onChange = on("change");
 
 
 const style = style$1;
-
-const unreachable$2 = value => {
-  const format = JSON.stringify(value);
-  throw new TypeError(`Internal error: Encountered impossible value: ${format}`);
-};
 
 const nofx = new class {
   constructor() {
@@ -2719,57 +2692,113 @@ class Tick$1 {
 
 var tick = (toMessage => new Tick$1(toMessage));
 
+const match$2 = matcher => (payload, state) => {
+  for (let key in payload) {
+    state = matcher[key](payload[key], state);
+  }
+  return state;
+};
+
+var List = createCommonjsModule(function (module, exports) {
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+class EmptyList {
+  constructor() {
+    this.length = 0;
+    this.isEmpty = true;
+  }
+
+  toArray() {
+    return nil;
+  }
+  push(head) {
+    return new LinkedList(head, this);
+  }
+}
+
+class LinkedList {
+  constructor(head, tail) {
+    this.isEmpty = false;
+
+    this.head = head;
+    this.tail = tail;
+    this.length = this.tail.length + 1;
+  }
+  push(head) {
+    return new LinkedList(head, this);
+  }
+  toArray() {
+    const array = [];
+    let node = this;
+    while (node.isEmpty === false) {
+      array.push(node.head);
+      node = node.tail;
+    }
+    return array;
+  }
+}
+
+const nil = Object.freeze([]);
+const emptyList = new EmptyList();
+
+const empty = exports.empty = () => emptyList;
+const singleton = exports.singleton = head => new LinkedList(head, emptyList);
+const push = exports.push = (head, tail) => new LinkedList(head, tail);
+});
+
+unwrapExports(List);
+var List_1 = List.empty;
+var List_2 = List.singleton;
+var List_3 = List.push;
+
 class Model {
-  constructor(n, time) {
+  constructor(n, time, requestTick) {
     this.n = n;
     this.time = time;
+    this.requestTick = requestTick;
   }
-  static new(time = 0, n = 200) {
-    return new Model(n, time);
+  static new(time = 0, n = 200, requestTick = true) {
+    return new Model(n, time, requestTick);
   }
-  static updateTime(model, time) {
+  static setTime(model, time) {
     if (model.time === time) {
       return model;
     } else {
-      return new Model(model.n, time);
+      return new Model(model.n, time, true);
     }
   }
-  static updateCount(model, n) {
+  static setCount(model, n) {
     if (model.n === n) {
       return model;
     } else {
-      return new Model(n, model.time);
+      return new Model(n, model.time, false);
     }
   }
 }
 
-const init = () => [Model.new(), tick(Tick)];
+const init = () => Model.new();
 
-const update = (message, model) => {
-  switch (message.type) {
-    case "Tick":
-      return [Model.updateTime(model, message.time), tick(Tick)];
-    case "UpdateCount":
-      {
-        return [Model.updateCount(model, message.n), nofx];
-      }
-    default:
-      return unreachable$2(message);
+const update = match$2({
+  tick(time, model) {
+    return Model.setTime(model, time);
+  },
+  setCount(n, model) {
+    return Model.setCount(model, n);
   }
-};
-
-
-
-
-
-const Tick = time => ({
-  type: "Tick",
-  time
 });
 
+const fx = model => model.requestTick ? tick(Tick) : nofx;
+
+
+
+
+
+const Tick = time => ({ tick: time });
+
 const UpdateCount = form({
-  type: ok$1("UpdateCount"),
-  n: at(["target", "valueAsNumber"], Integer$$1)
+  setCount: at(["target", "valueAsNumber"], Integer$$1)
 });
 
 
@@ -2777,17 +2806,7 @@ const UpdateCount = form({
 const viewObject = (t, n, x, y) => div([className("object"), style({
   left: `${x}px`,
   top: `${y}px`
-})], repeat(n, thunk, viewCircle, t, n));
-
-const repeat = (count, fn, ...params) => {
-  let index$$1 = 0;
-  let array$$1 = [];
-  while (index$$1 < count) {
-    array$$1[index$$1] = fn(...params, index$$1);
-    index$$1++;
-  }
-  return array$$1;
-};
+})], [viewCircle(t, n, n)]);
 
 const viewOrbiting = (t, n) => {
   const d = 200;
@@ -2798,9 +2817,9 @@ const viewOrbiting = (t, n) => {
 
 
 
-const viewCircle = (t, count, n) => {
+const viewCircle = (t, n, count) => {
   const r = n * 16;
-  return div([className(`circle`), data("radius", `${r}`), styleCircle(t, n, r, count)], []);
+  return div([className(`circle`), data("radius", `${r}`), styleCircle(t, n, r, count)], n == 0 ? [] : [viewCircle(t, n - 1, count)]);
 };
 
 const styleCircle = (t, n, r, count) => style({
@@ -2984,7 +3003,8 @@ function getCSSRGBAColor(r, g, b, a$$1) {
 var flatbuffers = {};
 
 /**
- * @typedef {number}
+ * @type {number}
+ * @const
  */
 flatbuffers.SIZEOF_SHORT = 2;
 
@@ -4127,9 +4147,6 @@ flatbuffers.ByteBuffer.prototype.createLong = function (low, high) {
 // Exports for Node.js and RequireJS
 ({}).flatbuffers = flatbuffers;
 
-/// @endcond
-/// @}
-
 class DecoderError {
   constructor() {
     this.isError = true;
@@ -4183,6 +4200,10 @@ class VariantError extends DecoderError {
 // Rewrite all overloads for string field methods.
 // Replace flatbuffers.Encoding with flatbuffers.EncodingValue
 
+/**
+ * @enum
+ */
+// export namespace JSON{
 const JSONVariant = {
   NONE: 0,
   Boolean: 1,
@@ -4896,6 +4917,10 @@ class Float$3 {
 // Replace all `/** @type {Value} */ (this.bb.readInt8(this.bb_pos + offset))` with `((this.bb.readInt8(this.bb_pos + offset):any):Value)`
 // Replace all `/** @type {JSON} */ (this.bb.readUint8(this.bb_pos + offset))` with `((this.bb.readUint8(this.bb_pos + offset):any):JSON)`
 
+/**
+ * @enum
+ */
+// // export namespace Decoder{
 const decoder = {
   NONE: 0,
   Error: 1,
@@ -11139,21 +11164,22 @@ const TAGGED_ELEMENT_NODE = 22;
 const THUNK_NODE = 23;
 
 class Process {
-  constructor({ view, update }, worker, node) {
+  constructor({ view, update, fx }, worker, node) {
     this.requestID = null;
 
     this.view = view;
     this.update = update;
+    this.fx = fx;
     this.worker = worker;
     this.node = node;
   }
   static spawn(program, worker, node = createHost()) {
     const process = new Process(program, worker, node);
     worker.addEventListener("message", process);
-    const [state, fx] = program.init();
+    const state = program.init();
 
     process.transact(state);
-    fx.perform(process);
+    process.fx(state).perform(process);
     return process;
   }
   handleEvent(event) {
@@ -11182,9 +11208,9 @@ class Process {
     }
   }
   send(payload) {
-    const [state, fx] = this.update(payload, this.state);
+    const state = this.update(payload, this.state);
     this.transact(state);
-    fx.perform(this);
+    this.fx(state).perform(this);
   }
   static toMessage(root, path, payload) {
     const tags = [];
@@ -11231,7 +11257,7 @@ const view = ({ time, n }) => {
   return main([], [input([onChange(UpdateCount)]), viewOrbiting(t, n)]);
 };
 
-Process.spawn({ update, init, Model, view }, self, createHost([], [main([], [input()])]));
+Process.spawn({ update, init, fx, view }, self, createHost([], [main([], [input()])]));
 
 }());
 //# sourceMappingURL=Orbiting.js.map

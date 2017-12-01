@@ -3,6 +3,7 @@
 import FlatBuffer from "dominion/src/Format/FlatBuffer"
 import * as DOMinion from "dominion"
 import type { FX } from "./Effect"
+import type { Match } from "./Update"
 
 const DOCUMENT_FRAGMENT_NODE = 11
 const ELEMENT_NODE = 1
@@ -12,8 +13,9 @@ const THUNK_NODE = 23
 
 type Program<message, model> = {
   view(model): DOMinion.Node<message>,
-  init(): [model, FX<message>],
-  update(message, model): [model, FX<message>]
+  init(): model,
+  update: Match<model, message>,
+  fx(model): FX<message>
 }
 
 export default class Process<message, model> {
@@ -22,14 +24,16 @@ export default class Process<message, model> {
   node: DOMinion.Node<message>
   view: model => DOMinion.Node<message>
   requestID: ?number = null
-  update: (message, model) => [model, FX<message>]
+  update: (message, model) => model
+  fx: model => FX<message>
   constructor(
-    { view, update }: Program<message, model>,
+    { view, update, fx }: Program<message, model>,
     worker: Worker,
     node: DOMinion.Node<message>
   ) {
     this.view = view
     this.update = update
+    this.fx = fx
     this.worker = worker
     this.node = node
   }
@@ -40,10 +44,10 @@ export default class Process<message, model> {
   ): Process<message, model> {
     const process = new Process(program, worker, node)
     worker.addEventListener("message", (process: Object))
-    const [state, fx] = program.init()
+    const state = program.init()
 
     process.transact(state)
-    fx.perform(process)
+    process.fx(state).perform(process)
     return process
   }
   handleEvent(event: Object) {
@@ -72,9 +76,9 @@ export default class Process<message, model> {
     }
   }
   send(payload: message): void {
-    const [state, fx] = this.update(payload, this.state)
+    const state = this.update(payload, this.state)
     this.transact(state)
-    fx.perform(this)
+    this.fx(state).perform(this)
   }
   static toMessage<a, b>(
     root: DOMinion.Node<b>,

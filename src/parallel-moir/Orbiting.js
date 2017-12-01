@@ -3,6 +3,7 @@
 import {
   update,
   init,
+  fx,
   Model,
   UpdateCount,
   styleBackground,
@@ -18,7 +19,7 @@ const view = ({ time, n }: Model): Node<Message> => {
 }
 
 Process.spawn(
-  { update, init, Model, view },
+  { update, init, fx, view },
   self,
   DOMinion.createHost([], [main([], [input()])])
 )

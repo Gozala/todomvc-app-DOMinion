@@ -3,6 +3,7 @@
 import {
   update,
   init,
+  fx,
   Model,
   styleBackground,
   viewControl,
@@ -16,4 +17,4 @@ const view = ({ time, n }: Model): Node<Message> => {
   return main([styleBackground(t)], [viewControl(n)])
 }
 
-Process.spawn({ update, init, Model, view }, self)
+Process.spawn({ update, init, view, fx }, self)

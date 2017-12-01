@@ -1,7 +1,5 @@
 // @flow
 
-type Message = { inc: number } | { dec: number } | { noop: null }
-
 export interface Process<message> {
   send(message): void;
 }
@@ -81,36 +79,3 @@ type Matcher<model, message> = $ObjMap<
   message,
   <data>(data) => (data, model) => [model, FX<message>]
 >
-
-export const match = <model, message: {}>(
-  matcher: Matcher<model, message>
-): ((message, model) => [model, FX<message>]) => (
-  payload: message,
-  state: model
-): [model, FX<message>] => {
-  let fx = nofx
-  for (let key in payload) {
-    const [nextState, nextFX] = matcher[key](state, payload[key])
-    state = nextState
-    fx = fx.and(nextFX)
-  }
-  return [state, fx]
-}
-
-// const update = match({
-//   inc(delta: number, state: number) {
-//     return [state + delta, send({ toggle: true })]
-//   },
-//   dec(delta: number, state: number) {
-//     return [state - delta, nofx]
-//   },
-//   toggle(value: boolean, state: number) {
-//     return [state, nofx]
-//   },
-//   noop(_, state: number) {
-//     return [state, nofx]
-//   }
-// })
-
-// // update(update(0, { inc: 6 }), { toggle: true })
-// update({ inc: 6, toggle: true }, 9)

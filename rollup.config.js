@@ -21,7 +21,6 @@ const bundle = (file, ...plugins) => ({
     [flatbuffersPath]: "({})"
   },
   plugins: [
-    ...plugins,
     babel({
       babelrc: false,
       presets: [flowSyntax]
@@ -56,9 +55,4 @@ const embed = process.argv.includes("--embed")
   ? process.argv[process.argv.indexOf("--embed") + 1].split(",")
   : []
 
-console.log(...watch)
-
-export default [
-  ...workers.map(bundle),
-  ...embed.map(path => bundle(path, ...watch))
-]
+export default [...workers.map(bundle), ...embed.map(bundle)]

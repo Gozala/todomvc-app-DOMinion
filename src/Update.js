@@ -1,39 +1,17 @@
 // @flow
 
-type Message = { inc: number } | { dec: number } | { noop: null }
-
-interface Match {
-  <model, message>(Matcher<model, message>): (model, message) => model;
-}
+export type Match<model, message> = (message, model) => model
 
 type Matcher<model, message> = $ObjMap<
-  message,
-  <data>(data) => (model, data) => model
+  message & message,
+  <payload>(payload) => (payload, model) => model
 >
 
 export const match = <model, message: {}>(
   matcher: Matcher<model, message>
-): ((model, message) => model) => (state: model, payload: message): model => {
+): Match<model, message> => (payload: message, state: model): model => {
   for (let key in payload) {
-    state = matcher[key](state, payload[key])
+    state = matcher[key](payload[key], state)
   }
   return state
 }
-
-const update = match({
-  inc(state: number, delta: number) {
-    return state + delta
-  },
-  dec(state: number, delta: number) {
-    return state - delta
-  },
-  toggle(state: number, value: boolean) {
-    return state
-  },
-  noop(state: number) {
-    return state
-  }
-})
-
-update(update(0, { inc: 6 }), { toggle: true })
-update(9, { inc: 6, toggle: true })

@@ -47,79 +47,104 @@ import {
 } from "../DOM"
 
 import * as Triangle from "./SierpinskiTriangle"
+import { match } from "../Update"
 import unreachable from "unreachable"
+import { nofx, and, type FX } from "../Effect"
+import tick from "../Tick"
+import { setInterval } from "../Timer"
 
 export class Model {
   seconds: number
   useTimeSlicing: boolean = true
-  intervalID: number
   start: number
   time: number
+  interval: boolean
+  requestFrame: boolean
   constructor(
     seconds: number,
     useTimeSlicing: boolean,
-    intervalID: number,
+    interval: boolean,
     start: number,
-    time: number
+    time: number,
+    requestFrame: boolean
   ) {
     this.seconds = seconds
     this.useTimeSlicing = useTimeSlicing
-    this.intervalID = intervalID
+    this.interval = interval
     this.start = start
     this.time = time
+    this.requestFrame = requestFrame
   }
-  static new(time: number, intervalID: number): Model {
-    return new Model(0, true, intervalID, time, time)
+  static new(time: number): Model {
+    return new Model(0, true, true, time, time, true)
   }
   static useTimeSlicing(
-    { seconds, intervalID, start, time }: Model,
+    { seconds, start, time }: Model,
     useTimeSlicing: boolean
   ): Model {
-    return new Model(seconds, useTimeSlicing, intervalID, start, time)
+    return new Model(seconds, useTimeSlicing, false, start, time, false)
   }
-  static time(
-    { seconds, intervalID, start, useTimeSlicing }: Model,
-    time: number
-  ): Model {
-    return new Model(seconds, useTimeSlicing, intervalID, start, time)
+  static time({ seconds, start, useTimeSlicing }: Model, time: number): Model {
+    return new Model(seconds, useTimeSlicing, false, start, time, true)
   }
-  static beat({
-    seconds,
-    intervalID,
-    start,
-    useTimeSlicing,
-    time
-  }: Model): Model {
-    return new Model(seconds % 10 + 1, useTimeSlicing, intervalID, start, time)
+  static beat({ seconds, start, useTimeSlicing, time }: Model): Model {
+    return new Model(
+      seconds % 10 + 1,
+      useTimeSlicing,
+      false,
+      start,
+      time,
+      false
+    )
   }
 }
 
 export type Message =
-  | { type: "UseTimeSlicing", value: boolean }
-  | { type: "Tick", time: number }
-  | { type: "Beat" }
-  | { type: "Triangle", message: Triangle.Message }
+  | { useTimeSlicing: boolean }
+  | { tick: number }
+  | { beat: null }
+  | { triangle: Triangle.Message }
 
-export const update = (message: Message, model: Model): [Model, () => void] => {
-  switch (message.type) {
-    case "UseTimeSlicing": {
-      return [Model.useTimeSlicing(model, message.value), ignore]
-    }
-    case "Tick": {
-      return [Model.time(model, message.time), ignore]
-    }
-    case "Triangle": {
-      return [model, ignore]
-    }
-    case "Beat": {
-      return [Model.beat(model), ignore]
-    }
-    default: {
-      return unreachable(message)
-    }
+//
+
+export const init = () => Model.new(0)
+export const update = match({
+  useTimeSlicing(value: boolean, model: Model): Model {
+    return Model.useTimeSlicing(model, value)
+  },
+  tick(time: number, model: Model): Model {
+    return Model.time(model, time)
+  },
+  beat(_, model: Model): Model {
+    return Model.beat(model)
+  },
+  triangle(message: Triangle.Message, model: Model) {
+    return model
+  }
+})
+
+export const fx = (model: Model): FX<Message> =>
+  and(
+    model.interval ? setInterval(Beat.new, 1000) : nofx,
+    model.requestFrame ? tick(Tick.new) : nofx
+  )
+
+class Beat {
+  beat: null = null
+  static new(): Beat {
+    return new Beat()
   }
 }
 
+class Tick {
+  tick: number
+  constructor(tick: number) {
+    this.tick = tick
+  }
+  static new(time: number) {
+    return new Tick(time)
+  }
+}
 export const view = (model: Model): Node<Message> => {
   const elapsed = model.time - model.start
   const seconds = model.seconds
@@ -149,13 +174,12 @@ export const view = (model: Model): Node<Message> => {
 }
 
 class TagTriangle {
-  type: "Triangle" = "Triangle"
-  message: Triangle.Message
-  constructor(message: Triangle.Message) {
-    this.message = message
+  triangle: Triangle.Message
+  constructor(triangle: Triangle.Message) {
+    this.triangle = triangle
   }
-  static new(message: Triangle.Message): Message {
-    return new TagTriangle(message)
+  static new(triangle: Triangle.Message): Message {
+    return new TagTriangle(triangle)
   }
 }
 
@@ -209,7 +233,4 @@ const styleApp = scale =>
     transform: `scaleX(${scale / 2.1}) scaleY(0.7) translateZ(0.1px)`
   })
 
-const UseTimeSlicing = (value: boolean) =>
-  Decoder.ok({ type: "UseTimeSlicing", value })
-
-const ignore = () => {}
+const UseTimeSlicing = (value: boolean) => Decoder.ok({ useTimeSlicing: value })

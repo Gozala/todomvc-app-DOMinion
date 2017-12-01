@@ -53,53 +53,51 @@ import {
 import unreachable from "unreachable"
 import { nofx, send, type FX } from "../Effect"
 import tick from "../Tick"
+import { match, type Match } from "../Update"
+import { empty } from "../../../dominion/lib/List"
 
 export class Model {
   n: number
   time: number
-  constructor(n: number, time: number) {
+  requestTick: boolean
+  constructor(n: number, time: number, requestTick: boolean) {
     this.n = n
     this.time = time
+    this.requestTick = requestTick
   }
-  static new(time: number = 0, n: number = 200) {
-    return new Model(n, time)
+  static new(time: number = 0, n: number = 200, requestTick: boolean = true) {
+    return new Model(n, time, requestTick)
   }
-  static updateTime(model: Model, time: number) {
+  static setTime(model: Model, time: number) {
     if (model.time === time) {
       return model
     } else {
-      return new Model(model.n, time)
+      return new Model(model.n, time, true)
     }
   }
-  static updateCount(model: Model, n: number) {
+  static setCount(model: Model, n: number) {
     if (model.n === n) {
       return model
     } else {
-      return new Model(n, model.time)
+      return new Model(n, model.time, false)
     }
   }
 }
 
-export type Message =
-  | { type: "Tick", time: number }
-  | { type: "UpdateCount", n: Decoder.integer }
+export type Message = { tick: number } | { setCount: Decoder.integer }
 
-export const init = () => [Model.new(), tick(Tick)]
+export const init = () => Model.new()
 
-export const update = (
-  message: Message,
-  model: Model
-): [Model, FX<Message>] => {
-  switch (message.type) {
-    case "Tick":
-      return [Model.updateTime(model, message.time), tick(Tick)]
-    case "UpdateCount": {
-      return [Model.updateCount(model, message.n), nofx]
-    }
-    default:
-      return unreachable(message)
+export const update = match({
+  tick(time: number, model: Model): Model {
+    return Model.setTime(model, time)
+  },
+  setCount(n: number, model: Model): Model {
+    return Model.setCount(model, n)
   }
-}
+})
+
+export const fx = (model: Model) => (model.requestTick ? tick(Tick) : nofx)
 
 export const view = ({ time, n }: Model): Node<Message> => {
   const t = time / 1600
@@ -119,14 +117,10 @@ export const viewControl = (n: number): Node<Message> =>
     onChange(UpdateCount)
   ])
 
-const Tick = (time: number): Message => ({
-  type: "Tick",
-  time
-})
+const Tick = (time: number): Message => ({ tick: time })
 
 export const UpdateCount = Decoder.form({
-  type: Decoder.ok("UpdateCount"),
-  n: Decoder.at(["target", "valueAsNumber"], Decoder.Integer)
+  setCount: Decoder.at(["target", "valueAsNumber"], Decoder.Integer)
 })
 
 export const styleBackground = (t: number) =>
