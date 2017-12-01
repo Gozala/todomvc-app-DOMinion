@@ -7,7 +7,6 @@ import babel from "rollup-plugin-babel"
 import flowSyntax from "babel-preset-flow-syntax"
 import legacy from "rollup-plugin-legacy"
 import serve from "rollup-plugin-serve"
-import livereload from "rollup-plugin-livereload"
 
 const flatbuffersPath = require.resolve("dominion/node_modules/flatbuffers")
 
@@ -46,7 +45,7 @@ const bundle = (file, ...plugins) => ({
 
 const watch =
   process.argv.includes("-w") || process.argv.includes("--watch")
-    ? [serve(), livereload()]
+    ? [serve()]
     : []
 
 const workers = process.argv.includes("--worker")

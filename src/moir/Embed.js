@@ -18,9 +18,8 @@ function updateFPS(time) {
 const process = Process.spawn("./Main.js", scene)
 
 const update = now => {
-  while (process.mailbox.length) {
-    process.tick()
-  }
+  const start = performance.now()
+  process.tick()
   updateFPS(now)
   requestAnimationFrame(update)
 }

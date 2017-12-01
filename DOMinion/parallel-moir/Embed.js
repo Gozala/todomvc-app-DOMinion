@@ -9938,24 +9938,26 @@ function updateFPS(time) {
 }
 
 const moirView = Process.spawn("./Moir.js", scene);
-const orbitingView = Process.spawn("./Orbiting.js", scene);
-const lemniscateView = Process.spawn("./Leminscate.js", scene);
+let orbitingView;
+let lemniscateView;
 
-let n = 0;
 const update = now => {
-  switch (n) {
-    case 0:
-      moirView.tick();
-      n = 1;
-      break;
-    case 1:
+  const time = performance.now();
+  moirView.tick();
+  if (orbitingView) {
+    if (time + 5 > performance.now()) {
       orbitingView.tick();
-      n = 2;
-      break;
-    default:
+    }
+  } else {
+    orbitingView = Process.spawn("./Orbiting.js", scene);
+  }
+
+  if (lemniscateView) {
+    if (time + 8 > performance.now()) {
       lemniscateView.tick();
-      n = 0;
-      break;
+    }
+  } else {
+    lemniscateView = Process.spawn("./Leminscate.js", scene);
   }
 
   updateFPS(now);
