@@ -15,12 +15,17 @@ function updateFPS(time) {
   }
 }
 
-const process = Process.spawn("./Main.js", scene)
+const triangle = Process.spawn("./Triangle.js", scene)
+const counter = Process.spawn("./Counter.js", scene)
 
 const update = now => {
-  const start = performance.now()
-  process.tick()
+  triangle.tick()
   updateFPS(now)
   requestAnimationFrame(update)
+  requestIdleCallback(updateCounter)
+}
+
+const updateCounter = () => {
+  counter.tick()
 }
 requestAnimationFrame(update)

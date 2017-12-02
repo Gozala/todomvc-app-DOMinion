@@ -1,6 +1,6 @@
 // @flow
 
-import * as Triangles from "./Triangles"
+import * as Triangles from "./Triangle"
 import Process from "../Worker"
 
 Process.spawn(Triangles, self)

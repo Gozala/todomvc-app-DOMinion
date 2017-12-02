@@ -993,11 +993,6 @@ const diffListeners = (last, next, log) => {
 };
 
 /**
- * Represents succeeded result and contains result `value`.
- * @param a type of the `value` for this result.
- */
-
-/**
  * Library for representing the `Result` of a computation that may fail. Which
  * is a more type friendly way to handle errors than exceptions.
  */
@@ -1734,6 +1729,15 @@ class Maybe {
     this.maybe = decoder;
   }
 }
+
+/**
+ * Parses given `input` string into a JSON value and then runs given
+ * `Decoder<a>` on it. Returns `Result` with `Result.Error<Decoder.ParseError>`
+ * if the string is not well-formed JSON or `Result.Error<Decoder.Error>` if
+ * the value can't be decoded with a given `Decoder<a>`. If operation is
+ * successfull returns `Result.Ok<a>`.
+ */
+
 
 /**
  * Runs given `Decoder<a>` on a given JSON value. Returns `Result` that either
@@ -2846,8 +2850,8 @@ class Model {
     this.time = time;
     this.requestFrame = requestFrame;
   }
-  static new(time) {
-    return new Model(0, true, true, time, time, true);
+  static new(time, interval$$1 = true, requestFrame = true) {
+    return new Model(0, true, interval$$1, time, time, requestFrame);
   }
   static useTimeSlicing({ seconds, start, time }, useTimeSlicing) {
     return new Model(seconds, useTimeSlicing, false, start, time, false);
@@ -2961,7 +2965,8 @@ var Triangles = Object.freeze({
 var flatbuffers = {};
 
 /**
- * @typedef {number}
+ * @type {number}
+ * @const
  */
 flatbuffers.SIZEOF_SHORT = 2;
 
@@ -4104,9 +4109,6 @@ flatbuffers.ByteBuffer.prototype.createLong = function (low, high) {
 // Exports for Node.js and RequireJS
 ({}).flatbuffers = flatbuffers;
 
-/// @endcond
-/// @}
-
 class DecoderError {
   constructor() {
     this.isError = true;
@@ -4160,6 +4162,10 @@ class VariantError extends DecoderError {
 // Rewrite all overloads for string field methods.
 // Replace flatbuffers.Encoding with flatbuffers.EncodingValue
 
+/**
+ * @enum
+ */
+// export namespace JSON{
 const JSONVariant = {
   NONE: 0,
   Boolean: 1,
@@ -4873,6 +4879,10 @@ class Float$3 {
 // Replace all `/** @type {Value} */ (this.bb.readInt8(this.bb_pos + offset))` with `((this.bb.readInt8(this.bb_pos + offset):any):Value)`
 // Replace all `/** @type {JSON} */ (this.bb.readUint8(this.bb_pos + offset))` with `((this.bb.readUint8(this.bb_pos + offset):any):JSON)`
 
+/**
+ * @enum
+ */
+// // export namespace Decoder{
 const decoder = {
   NONE: 0,
   Error: 1,

@@ -52,6 +52,8 @@
       "flatc --ts src/Format/FlatBuffer/JSON.fbs/JSON.fbs && mv JSON_generated.ts src/Format/FlatBuffer/JSON.fbs/JSON.ts",
     "build:todo": "rollup -c --worker todo/Main --embed todo/Main",
     "build:triangle": "rollup -c --worker triangle/Main --embed triangle/Embed",
+    "build:parallel-triangle":
+      "rollup -w -c --worker parallel-triangle/Triangle,parallel-triangle/Counter --embed parallel-triangle/Embed",
     "build:moir": "rollup -c --worker moir/Main --embed moir/Embed",
     "build:parallel-moir":
       "rollup -c --worker parallel-moir/Moir,parallel-moir/Orbiting,parallel-moir/Leminscate --embed parallel-moir/Embed",
@@ -61,14 +63,14 @@
     "precommit": "lint-staged",
     "start:todo": "rollup -w -c --worker todo/Main --embed todo/Embed",
     "start:triangle":
-      "rollup -w -c --worker triangle/Main --embed triangle/Main",
+      "rollup -w -c --worker triangle/Main --embed triangle/Embed",
     "start:parallel-triangle":
-      "rollup -w -c --worker parallel-triangle/Left,parallel-triangle/Right --embed parallel-triangle/Main",
+      "rollup -w -c --worker parallel-triangle/Triangle,parallel-triangle/Counter --embed parallel-triangle/Embed",
     "start:moir": "rollup -w -c --worker moir/Main --embed moir/Embed",
     "start:parallel-moir":
       "rollup -c -w --worker parallel-moir/Moir,parallel-moir/Orbiting,parallel-moir/Leminscate --embed parallel-moir/Embed",
     "start":
-      "rollup -c -w --worker todo/Main,triangle/Main,moir/Main,parallel-moir/Moir,parallel-moir/Orbiting,parallel-moir/Leminscate --embed todo/Embed,triangle/Main,moir/Embed,parallel-moir/Embed"
+      "rollup -c -w --worker todo/Main,triangle/Main,moir/Main,parallel-moir/Moir,parallel-moir/Orbiting,parallel-moir/Leminscate,parallel-triangle/Triangle,parallel-triangle/Counter --embed todo/Embed,triangle/Main,moir/Embed,parallel-moir/Embed,parallel-triangle/Embed"
   },
   "lint-staged": {
     "src/**/*.js": ["prettier --parser flow --no-semi --write", "git add"]

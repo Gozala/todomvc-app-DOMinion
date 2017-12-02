@@ -6,14 +6,14 @@ This repository contains several examples in attempt to compare perfomance of
 #### Moir
 
 * [DOMinion](https://gozala.github.io/vs-dominion/DOMinion/moir/)
-* [DOMinion
-  parallel](https://gozala.github.io/vs-dominion/DOMinion/parallel-moir/)
+* [DOMinion parallel](https://gozala.github.io/vs-dominion/DOMinion/parallel-moir/)
 * [React](https://gozala.github.io/vs-dominion/React/moir/)
 * [Plain](https://gozala.github.io/vs-dominion/Plain/moir/)
 
 #### React fiber triangle
 
 * [DOMinion](https://gozala.github.io/vs-dominion/DOMinion/triangle/)
+* [DOMinion parallel](https://gozala.github.io/vs-dominion/DOMinion/parallel-triangle/)
 * [React](https://gozala.github.io/vs-dominion/React/triangle/)
 
 #### Todo MVC

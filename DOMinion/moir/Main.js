@@ -2423,26 +2423,6 @@ class BatchFX {
 
 const and$2 = (left, right) => left.size === 0 ? right : right.size === 0 ? left : new BatchFX([left, right]);
 
-
-
-// const update = match({
-//   inc(delta: number, state: number) {
-//     return [state + delta, send({ toggle: true })]
-//   },
-//   dec(delta: number, state: number) {
-//     return [state - delta, nofx]
-//   },
-//   toggle(value: boolean, state: number) {
-//     return [state, nofx]
-//   },
-//   noop(_, state: number) {
-//     return [state, nofx]
-//   }
-// })
-
-// // update(update(0, { inc: 6 }), { toggle: true })
-// update({ inc: 6, toggle: true }, 9)
-
 var commonjsGlobal = typeof window !== 'undefined' ? window : typeof global !== 'undefined' ? global : typeof self !== 'undefined' ? self : {};
 
 
@@ -2701,7 +2681,7 @@ class Tick$1 {
 
 var tick = (toMessage => new Tick$1(toMessage));
 
-const match$2 = matcher => (payload, state) => {
+const match$1 = matcher => (payload, state) => {
   for (let key in payload) {
     state = matcher[key](payload[key], state);
   }
@@ -2789,7 +2769,7 @@ class Model {
 
 const init = () => Model.new();
 
-const update = match$2({
+const update = match$1({
   tick(time, model) {
     return Model.setTime(model, time);
   },

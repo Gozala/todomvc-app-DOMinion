@@ -75,8 +75,12 @@ export class Model {
     this.time = time
     this.requestFrame = requestFrame
   }
-  static new(time: number): Model {
-    return new Model(0, true, true, time, time, true)
+  static new(
+    time: number,
+    interval: boolean = true,
+    requestFrame: boolean = true
+  ): Model {
+    return new Model(0, true, interval, time, time, requestFrame)
   }
   static useTimeSlicing(
     { seconds, start, time }: Model,
