@@ -5,6 +5,7 @@ This repository contains several examples in attempt to compare perfomance of
 
 #### Moir
 
+* [DOMinion (on main thread)](https://gozala.github.io/vs-dominion/DOMinion/main-moir/)
 * [DOMinion (single worker)](https://gozala.github.io/vs-dominion/DOMinion/moir/)
 * [DOMinion (three workers)](https://gozala.github.io/vs-dominion/DOMinion/parallel-moir/)
 * [React](https://gozala.github.io/vs-dominion/React/moir/)

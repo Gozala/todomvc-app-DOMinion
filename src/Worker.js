@@ -11,7 +11,7 @@ const INDEXED_ELEMENT_NODE = 21
 const TAGGED_ELEMENT_NODE = 22
 const THUNK_NODE = 23
 
-type Program<message, model> = {
+export type Program<message, model> = {
   view(model): DOMinion.Node<message>,
   init(): model,
   update: Match<model, message>,

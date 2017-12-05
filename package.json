@@ -55,6 +55,7 @@
     "build:parallel-triangle":
       "rollup -w -c --worker parallel-triangle/Triangle,parallel-triangle/Counter --embed parallel-triangle/Embed",
     "build:moir": "rollup -c --worker moir/Main --embed moir/Embed",
+    "build:main-moir": "rollup -c --embed main-moir/Embed",
     "build:parallel-moir":
       "rollup -c --worker parallel-moir/Moir,parallel-moir/Orbiting,parallel-moir/Leminscate --embed parallel-moir/Embed",
     "build":
@@ -67,10 +68,11 @@
     "start:parallel-triangle":
       "rollup -w -c --worker parallel-triangle/Triangle,parallel-triangle/Counter --embed parallel-triangle/Embed",
     "start:moir": "rollup -w -c --worker moir/Main --embed moir/Embed",
+    "start:main-moir": "rollup -w -c --embed main-moir/Embed",
     "start:parallel-moir":
       "rollup -c -w --worker parallel-moir/Moir,parallel-moir/Orbiting,parallel-moir/Leminscate --embed parallel-moir/Embed",
     "start":
-      "rollup -c -w --worker todo/Main,triangle/Main,moir/Main,parallel-moir/Moir,parallel-moir/Orbiting,parallel-moir/Leminscate,parallel-triangle/Triangle,parallel-triangle/Counter --embed todo/Embed,triangle/Main,moir/Embed,parallel-moir/Embed,parallel-triangle/Embed"
+      "rollup -c -w --worker todo/Main,triangle/Main,moir/Main,parallel-moir/Moir,parallel-moir/Orbiting,parallel-moir/Leminscate,parallel-triangle/Triangle,parallel-triangle/Counter --embed todo/Embed,triangle/Main,moir/Embed,parallel-moir/Embed,main-moir/Embed,parallel-triangle/Embed"
   },
   "lint-staged": {
     "src/**/*.js": ["prettier --parser flow --no-semi --write", "git add"]

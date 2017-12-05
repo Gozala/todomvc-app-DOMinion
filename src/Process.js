@@ -19,7 +19,7 @@ const indexOf = (child: Node, parent: Node): ?number => {
   return null
 }
 
-const getPath = (from: Node, to: Node): ?(number[]) => {
+export const getPath = (from: Node, to: Node): ?(number[]) => {
   let path = []
   let node = from
   while (node !== to) {
